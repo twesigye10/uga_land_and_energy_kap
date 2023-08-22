@@ -92,7 +92,31 @@ df_KAP_knowledge_to_build_improved_stoves_2 <- df_tool_data %>%
      dplyr::select(starts_with("i.check")) %>%
      rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
  
- write_csv(x = df_KAP_knowledge_to_build_improved_stoves_2, file = "outputs/fuel.csv")
+ 
+ # The respondent says they use briquettes regularly, but did not report briquettes as one of their main cooking fuels.i.e,
+ # KAP_regular_briquette_usage = "yes", and KAP_fuels_mostly_used != "briquettes"
+ df_KAP_regular_briquette_usage_4 <- df_tool_data %>% 
+     filter(KAP_regular_briquette_usage %in% c("yes"), 
+            !str_detect(string = KAP_fuels_mostly_used, pattern = "briquettes"))%>% 
+     mutate(i.check.type = "change_response",
+            i.check.name = "KAP_regular_briquette_usage", 
+            i.check.current_value = KAP_regular_briquette_usage,
+            i.check.value = "", 
+            i.check.issue_id = "logic_c_KAP_regular_briquette_usage_4",
+            i.check.issue = glue("KAP_regular_briquette_usage: {KAP_regular_briquette_usage},
+                              KAP_fuels_mostly_used: {KAP_fuels_mostly_used}"),
+            i.check.other_text = "",
+            i.check.checked_by = "MT",
+            i.check.checked_date = as_date(today()),
+            i.check.comment = "",
+            i.check.reviewed = "",
+            i.check.adjust_log = "",
+            i.check.uuid_cl = "",
+            i.check.so_sm_choices = "") %>% 
+     dplyr::select(starts_with("i.check")) %>%
+     rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
+ 
+ 
  
 
 
