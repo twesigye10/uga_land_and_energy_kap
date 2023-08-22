@@ -164,7 +164,30 @@ df_KAP_knowledge_to_build_improved_stoves_2 <- df_tool_data %>%
      rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
  
 
-
+ # The respondent says deforestation is an issue, but does not think the environment is at riski.e,
+ # KAP_deforestation_an_issue = "yes", and KAP_environment_at_risk = "no"
+ df_KAP_deforestation_an_issue_7 <- df_tool_data %>% 
+     filter(KAP_deforestation_an_issue %in% c("yes"), 
+            KAP_environment_at_risk%in% c("no"))%>% 
+     mutate(i.check.type = "change_response",
+            i.check.name = "KAP_deforestation_an_issue", 
+            i.check.current_value = KAP_deforestation_an_issue,
+            i.check.value = "", 
+            i.check.issue_id = "logic_c_KAP_deforestation_an_issue_7",
+            i.check.issue = glue("KAP_deforestation_an_issue: {KAP_deforestation_an_issue}, 
+                              KAP_environment_at_risk: {KAP_environment_at_risk}"),
+            i.check.other_text = "",
+            i.check.checked_by = "MT",
+            i.check.checked_date = as_date(today()),
+            i.check.comment = "",
+            i.check.reviewed = "",
+            i.check.adjust_log = "",
+            i.check.uuid_cl = "",
+            i.check.so_sm_choices = "") %>% 
+     dplyr::select(starts_with("i.check")) %>%
+     rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
+ 
+ 
 
 
 
