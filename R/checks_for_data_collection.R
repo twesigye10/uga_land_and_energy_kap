@@ -44,9 +44,8 @@ df_KAP_stove_type_owned_1 <- df_tool_data %>%
            i.check.so_sm_choices = "") %>% 
     dplyr::select(starts_with("i.check")) %>%
     rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
-write_csv(x = df_KAP_stove_type_owned_1, file = "outputs/ddd.csv")
- 
-# The respondent knows how to make an improved stove but does not own one.. i.e,
+
+# The respondent knows how to make an improved stove but does not own one. i.e,
 # KAP_knowledge_to_build_improved_stoves = "yes", and KAP_stove_type_owned = "everything except the improved stove"
 df_KAP_knowledge_to_build_improved_stoves_2 <- df_tool_data %>% 
     filter(KAP_knowledge_to_build_improved_stoves %in% c("yes"), 
@@ -69,8 +68,32 @@ df_KAP_knowledge_to_build_improved_stoves_2 <- df_tool_data %>%
     dplyr::select(starts_with("i.check")) %>%
     rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
 
+ 
+ # The respondent says they are not familiar with the concept of briquettes, but reported using briquettes as one of their main fuels for cooking. i.e,
+ # KAP_knowledge_to_build_improved_stoves = "yes", and KAP_stove_type_owned = "everything except the improved stove"
+ df_KAP_knowledge_to_build_improved_stoves_2 <- df_tool_data %>% 
+     filter(KAP_knowledge_to_build_improved_stoves %in% c("yes"), 
+            !str_detect(string = KAP_stove_type_owned, pattern = "a_fuel_efficient_cookstove"))%>% 
+     mutate(i.check.type = "change_response",
+            i.check.name = "KAP_knowledge_to_build_improved_stoves", 
+            i.check.current_value = KAP_knowledge_to_build_improved_stoves,
+            i.check.value = "", 
+            i.check.issue_id = "logic_c_KAP_knowledge_to_build_improved_stoves_2",
+            i.check.issue = glue("KAP_knowledge_to_build_improved_stoves: {KAP_knowledge_to_build_improved_stoves}, 
+                              KAP_stove_type_owned: {KAP_stove_type_owned}"),
+            i.check.other_text = "",
+            i.check.checked_by = "MT",
+            i.check.checked_date = as_date(today()),
+            i.check.comment = "",
+            i.check.reviewed = "",
+            i.check.adjust_log = "",
+            i.check.uuid_cl = "",
+            i.check.so_sm_choices = "") %>% 
+     dplyr::select(starts_with("i.check")) %>%
+     rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
+ 
  write_csv(x = df_KAP_knowledge_to_build_improved_stoves_2, file = "outputs/fuel.csv")
-
+ 
 
 
 
