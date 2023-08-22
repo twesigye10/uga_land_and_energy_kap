@@ -116,9 +116,53 @@ df_KAP_knowledge_to_build_improved_stoves_2 <- df_tool_data %>%
      dplyr::select(starts_with("i.check")) %>%
      rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
  
+ # The respondent says briquettes are one of their main cooking fuels, but says they do not use briquettes regularly (at least once a week).i.e,
+ # KAP_regular_briquette_usage = "no", and KAP_fuels_mostly_used = "briquettes"
+ df_KAP_regular_briquette_usage_no_4 <- df_tool_data %>% 
+     filter(KAP_regular_briquette_usage %in% c("no"), 
+            str_detect(string = KAP_fuels_mostly_used, pattern = "briquettes"))%>% 
+     mutate(i.check.type = "change_response",
+            i.check.name = "KAP_regular_briquette_usage", 
+            i.check.current_value = KAP_regular_briquette_usage,
+            i.check.value = "", 
+            i.check.issue_id = "logic_c_KAP_regular_briquette_usage_no_5",
+            i.check.issue = glue("KAP_regular_briquette_usage: {KAP_regular_briquette_usage},
+                              KAP_fuels_mostly_used: {KAP_fuels_mostly_used}"),
+            i.check.other_text = "",
+            i.check.checked_by = "MT",
+            i.check.checked_date = as_date(today()),
+            i.check.comment = "",
+            i.check.reviewed = "",
+            i.check.adjust_log = "",
+            i.check.uuid_cl = "",
+            i.check.so_sm_choices = "") %>% 
+     dplyr::select(starts_with("i.check")) %>%
+     rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
  
  
-
+ # The respondent says there is a shortage of wood, but does not think the environment around them is at risk.i.e,
+ # KAP_why_use_briquettes = "there_is_a_shortage_of_wood", and KAP_environment_at_risk = "no"
+ df_KAP_environment_at_risk_6 <- df_tool_data %>% 
+     filter(KAP_environment_at_risk %in% c("no"), 
+            str_detect(string = KAP_why_use_briquttes, pattern = "there_is_a_shortage_of_wood"))%>% 
+     mutate(i.check.type = "change_response",
+            i.check.name = "KAP_environment_at_risk", 
+            i.check.current_value = KAP_environment_at_risk,
+            i.check.value = "", 
+            i.check.issue_id = "logic_c_KAP_environment_at_risk_6",
+            i.check.issue = glue("KAP_environment_at_risk: {KAP_environment_at_risk}, 
+                              KAP_why_use_briquttes: {KAP_why_use_briquttes}"),
+            i.check.other_text = "",
+            i.check.checked_by = "MT",
+            i.check.checked_date = as_date(today()),
+            i.check.comment = "",
+            i.check.reviewed = "",
+            i.check.adjust_log = "",
+            i.check.uuid_cl = "",
+            i.check.so_sm_choices = "") %>% 
+     dplyr::select(starts_with("i.check")) %>%
+     rename_with(~str_replace(string = .x, pattern = "i.check.", replacement = ""))
+ 
 
 
 
