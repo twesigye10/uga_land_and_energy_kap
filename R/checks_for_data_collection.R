@@ -70,17 +70,17 @@ df_KAP_knowledge_to_build_improved_stoves_2 <- df_tool_data %>%
 
  
  # The respondent says they are not familiar with the concept of briquettes, but reported using briquettes as one of their main fuels for cooking. i.e,
- # KAP_knowledge_to_build_improved_stoves = "yes", and KAP_stove_type_owned = "everything except the improved stove"
- df_KAP_knowledge_to_build_improved_stoves_2 <- df_tool_data %>% 
-     filter(KAP_knowledge_to_build_improved_stoves %in% c("yes"), 
-            !str_detect(string = KAP_stove_type_owned, pattern = "a_fuel_efficient_cookstove"))%>% 
+ # KAP_briquettes_familiarity = "no", and KAP_fuels_mostly_used = "briquettes"
+ df_KAP_briquettes_familiarity_3 <- df_tool_data %>% 
+     filter(KAP_briquettes_familiarity %in% c("no"), 
+            str_detect(string = KAP_fuels_mostly_used, pattern = "briquettes"))%>% 
      mutate(i.check.type = "change_response",
-            i.check.name = "KAP_knowledge_to_build_improved_stoves", 
-            i.check.current_value = KAP_knowledge_to_build_improved_stoves,
+            i.check.name = "KAP_briquettes_familiarity", 
+            i.check.current_value = KAP_briquettes_familiarity,
             i.check.value = "", 
-            i.check.issue_id = "logic_c_KAP_knowledge_to_build_improved_stoves_2",
-            i.check.issue = glue("KAP_knowledge_to_build_improved_stoves: {KAP_knowledge_to_build_improved_stoves}, 
-                              KAP_stove_type_owned: {KAP_stove_type_owned}"),
+            i.check.issue_id = "logic_c_KAP_briquettes_familiarity_3",
+            i.check.issue = glue("KAP_briquettes_familiarity: {KAP_briquettes_familiarity}, 
+                              KAP_fuels_mostly_used: {KAP_fuels_mostly_used}"),
             i.check.other_text = "",
             i.check.checked_by = "MT",
             i.check.checked_date = as_date(today()),
