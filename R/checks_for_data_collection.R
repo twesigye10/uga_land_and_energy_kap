@@ -20,15 +20,22 @@ df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "sur
 df_choices <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "choices")
 
 # check survey time
- survey_time_refugee_settlement <-  check_survey_time(
-     input_tool_data = df_tool_data,
+ survey_time_duration <-  check_survey_time(
+    input_tool_data = df_tool_data,
     input_enumerator_id_col = "enumerator_id",
     input_location_col = "district_name",
     input_min_time = 20,
     input_max_time = 120)
 
+ # check time between surveys
+ time_between_surveys <-  check_time_interval_btn_surveys(
+     input_tool_data = df_tool_data,
+     input_enumerator_id_col = "enumerator_id",
+     input_location_col= "district_name",
+     input_min_time = 5
+ )
  
-write_csv(x = survey_time_host_community, file = "outputs/time.csv")
+
 # Logical checks
 
 # The respondent says they use the three stone fire, but neither charcoal nor wood are their main fuels. i.e,
