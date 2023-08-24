@@ -4,6 +4,9 @@ library(tidyverse)
 library(lubridate)
 library(glue)
 library(butteR)
+library(sf)
+library(cluster)
+
 
 # load data
 df_tool_data <- readxl::read_excel("inputs/UGA2305_land__and_energy_tool_testing.xlsx") %>% 
@@ -19,12 +22,13 @@ df_tool_data <- readxl::read_excel("inputs/UGA2305_land__and_energy_tool_testing
 
 df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "survey") %>% 
     mutate(across(where(is.character), str_to_lower))
-   
 df_choices <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "choices")
+
+df_sample_data <- sf::st_read("inputs/land_energy_host_samples.gpkg", quiet = TRUE)
+
 
 # output holder -----------------------------------------------------------
 checks <- list()
-
 
 # time checks -------------------------------------------------------------
 # check survey time
@@ -67,6 +71,10 @@ checks <- list()
      batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
  add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_no_consent")
  
+ # check duplicate uuids
+ df_duplicate_uuids <- checks_duplicate_uuids(input_tool_data = df_tool_data)
+ 
+ add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_uuids")
  
 # other specify -----------------------------------------------------------
  df_others_data <- extract_other_specify_data(input_tool_data = df_tool_data, 
@@ -75,6 +83,54 @@ checks <- list()
                                               input_survey = df_survey, 
                                               input_choices = df_choices)
  add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_others_data")
+ 
+ 
+
+# spatial checks ----------------------------------------------------------
+
+ if("status" %in% colnames(df_sample_data)){
+     sample_pt_nos <- df_sample_data %>% 
+         mutate(unique_pt_number = paste0(status, "_", Name)) %>% 
+         pull(unique_pt_number) %>% 
+         unique()
+ }else{
+     sample_pt_nos <- df_sample_data %>% 
+         mutate(unique_pt_number = Name) %>% 
+         pull(unique_pt_number) %>% 
+         unique()
+ }
+ 
+ # duplicate point numbers
+  df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
+                                                     input_enumerator_id_col = "enumerator_id",
+                                                     input_location_col = "district_name",
+                                                     input_point_id_col = "point_number",
+                                                     input_sample_pt_nos_list = sample_pt_nos)
+ 
+ add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
+ 
+ 
+ # point number does not exist in sample
+ 
+ df_pt_number_not_in_sample <- check_pt_number_not_in_samples(input_tool_data = df_tool_data,
+                                                              input_enumerator_id_col = "enumerator_id",
+                                                              input_location_col = "district_name",
+                                                              input_point_id_col = "point_number",
+                                                              input_sample_pt_nos_list = sample_pt_nos)
+ 
+ add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_pt_number_not_in_sample")
+ 
+ 
+ # check for exceeded threshold distance
+ 
+  df_greater_thresh_distance <- check_threshold_distance(input_sample_data = df_sample_data,
+                                                         input_tool_data = df_tool_data,
+                                                         input_enumerator_id_col = "enumerator_id",
+                                                         input_location_col = "district_name",
+                                                         input_point_id_col = "point_number",
+                                                         input_threshold_dist = 150)
+ 
+ add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_greater_thresh_distance")
  
  
  # logical checks ----------------------------------------------------------
@@ -251,7 +307,7 @@ add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_kap_know
  # kap_rank_climate_change_impact = "all yes options", and kap_rank_climate_change_negative_impact_next_year = "no"
  df_kap_rank_climate_change_negative_impact_next_year_8 <- df_tool_data %>% 
      filter(kap_rank_climate_change_negative_impact_next_year %in% c("no"), 
-            # kap_rank_climate_change_impact %in% c("yes_a_lot", "yes_somewhat", "yes_a_little")) %>% 
+             # kap_rank_climate_change_impact %in% c("yes_a_lot", "yes_somewhat", "yes_a_little")) %>% 
              str_detect(kap_rank_climate_change_impact, "^yes"))%>% 
      mutate(i.check.type = "change_response",
             i.check.name = "kap_rank_climate_change_negative_impact_next_year", 
