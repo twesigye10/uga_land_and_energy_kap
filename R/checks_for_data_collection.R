@@ -24,7 +24,7 @@ df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "sur
     mutate(across(where(is.character), str_to_lower))
 df_choices <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "choices")
 
-df_sample_data <- sf::st_read("inputs/land_energy_host_samples.gpkg", quiet = TRUE)
+df_sample_data <- sf::st_read("inputs/land_energy_settlement_host_samples.gpkg", quiet = TRUE)
 
 
 # output holder -----------------------------------------------------------
@@ -338,23 +338,42 @@ df_combined_checks <- bind_rows(checks)
                               str_replace(string = name, pattern = "_rank_.*", replacement = ""), name)) %>%
      left_join(df_survey %>% select(name, label), by = c("int.name" = "name")) %>%
      select(-int.name) %>%
-     relocate(label, .after = name) 
-     
- # write output
- write_csv(x = df_combined_checks_plus_label, file = paste0("outputs/", butteR::date_file_prefix(), "_combined_checks_land_energy.csv"), na = "")
- 
- 
-# contact details for hhs agreed for IDI (independent file)
+     relocate(label, .after = name) %>% 
+     mutate(FO_comment = "") %>% 
+     relocate(FO_comment, .after = comment) 
+         
+ # contact details for hhs agreed for IDI (independent file)
  contact_details <- df_tool_data %>% 
      filter(land_agree_to_idi_interview %in% c("yes")) %>% 
      mutate(i.check.start_date = as_date(start),
             i.check.enumerator_id = enumerator_id,
-            i.check.enumerator_id = enumerator_id,
             i.check.district_name = district_name,
             i.check.refugee_settlement = refugee_settlement,
             i.check.sub_county_div = sub_county_div,
-            i.check.point_number = point_number) %>% 
-            # i.check.respondent_phone_name = respondent_phone_name,
-            # i.check.respondent_phone_number = respondent_phone_number) %>% 
-     batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
+            i.check.point_number = point_number,
+            i.check.hh_has_access_to_additional_land = land_hh_have_access_to_additional_land,
+            i.check.hh_ever_attempt_access_additional_land = land_hh_ever_attempt_access_additional_land,
+            i.check.respondent_name = respondent_name,
+            i.check.respondent_phone_number = respondent_phone_number) %>%
+     batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "") %>% 
+     select(-c(uuid))
 
+ 
+ # write output
+ 
+ list_of_output_files <- list("UGA2305_land _and_energy" = df_combined_checks_plus_label,
+                              "contact_details" = contact_details)
+ 
+ 
+ # write_csv(x = list_of_output_files, file = paste0("outputs/", butteR::date_file_prefix(), 
+                                                   # "_combined_checks_land_energy.csv"), na = "")
+ 
+ openxlsx::write.xlsx(x = list_of_output_files,
+                      file = paste0("outputs/", butteR::date_file_prefix(), 
+                                    "_combined_checks_land_energy.xlsx"), 
+                      overwrite = TRUE, keepNA = TRUE, na.string = "NA")
+ 
+ 
+ 
+ 
+ 
