@@ -366,8 +366,8 @@ df_combined_checks <- bind_rows(checks)
                               "contact_details" = contact_details)
  
  
-  # write_csv(x = list_of_output_files, file = paste0("outputs/", butteR::date_file_prefix(), 
-                        # "_combined_checks_land_energy.csv"), na = "")
+  write_csv(x = df_combined_checks_plus_label, file = paste0("outputs/", butteR::date_file_prefix(), 
+                         "_combined_checks_land_energy.csv"), na = "")
  
  openxlsx::write.xlsx(x = list_of_output_files,
                       file = paste0("outputs/", butteR::date_file_prefix(), 
