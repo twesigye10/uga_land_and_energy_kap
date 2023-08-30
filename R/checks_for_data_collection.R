@@ -9,19 +9,19 @@ library(cluster)
 
 
 # load data
-df_tool_data <- readxl::read_excel("inputs/UGA2305_land__and_energy_tool_testing.xlsx") %>% 
+df_tool_data <- readxl::read_excel("inputs/UGA2305_land__and_energy_testing_data.xlsx") %>% 
     rename_with(~str_replace(string = .x, pattern = "meta_", replacement = "")) %>% 
-    rename_with(~str_replace(string = .x, pattern = "KAP", replacement = "kap")) %>% 
     mutate(i.check.uuid = `_uuid`,
            i.check.start_date = as_date(start),
            i.check.enumerator_id = as.character(enumerator_id),
            i.check.district_name = district_name,
            i.check.point_number = point_number,
            start = as_datetime(start),
-           end = as_datetime(end)) 
+           end = as_datetime(end)) %>% 
+    filter(as_date(start) > "21-08-2023")
 
-df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "survey") %>% 
-    mutate(across(where(is.character), str_to_lower))
+df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "survey") 
+    
 df_choices <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "choices")
 
 df_sample_data <- sf::st_read("inputs/land_energy_settlement_host_samples.gpkg", quiet = TRUE)
@@ -259,14 +259,14 @@ add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_kap_know
  # kap_why_use_briquettes = "there_is_a_shortage_of_wood", and kap_environment_at_risk = "no"
  df_kap_environment_at_risk_6 <- df_tool_data %>% 
      filter(kap_environment_at_risk %in% c("no"), 
-            str_detect(string = kap_why_use_briquttes, pattern = "there_is_a_shortage_of_wood"))%>% 
+            str_detect(string = kap_why_use_briquettes, pattern = "there_is_a_shortage_of_wood"))%>% 
      mutate(i.check.type = "change_response",
             i.check.name = "kap_environment_at_risk", 
             i.check.current_value = kap_environment_at_risk,
             i.check.value = "", 
             i.check.issue_id = "logic_c_kap_environment_at_risk_6",
             i.check.issue = glue("kap_environment_at_risk: {kap_environment_at_risk}, 
-                              kap_why_use_briquttes: {kap_why_use_briquttes}"),
+                              kap_why_use_briquettes: {kap_why_use_briquettes}"),
             i.check.other_text = "",
             i.check.checked_by = "MT",
             i.check.checked_date = as_date(today()),
@@ -336,13 +336,13 @@ df_combined_checks <- bind_rows(checks)
  df_combined_checks_plus_label <- df_combined_checks %>%
      mutate(int.name = ifelse(str_detect(string = name, pattern = "_rank_.*"), 
                               str_replace(string = name, pattern = "_rank_.*", replacement = ""), name)) %>%
-     left_join(df_survey %>% select(name, label), by = c("int.name" = "name")) %>%
+     left_join(df_survey %>% select(name, label), by = c("int.name" = "name")) %>% 
      select(-int.name) %>%
      relocate(label, .after = name) %>% 
      mutate(FO_comment = "") %>% 
      relocate(FO_comment, .after = comment) 
-         
- # contact details for hhs agreed for IDI (independent file)
+      
+  # contact details for hhs agreed for IDI (independent file)
  contact_details <- df_tool_data %>% 
      filter(land_agree_to_idi_interview %in% c("yes")) %>% 
      mutate(i.check.start_date = as_date(start),
@@ -353,9 +353,10 @@ df_combined_checks <- bind_rows(checks)
             i.check.point_number = point_number,
             i.check.hh_has_access_to_additional_land = land_hh_have_access_to_additional_land,
             i.check.hh_ever_attempt_access_additional_land = land_hh_ever_attempt_access_additional_land,
-            i.check.respondent_name = respondent_name,
-            i.check.respondent_phone_number = respondent_phone_number) %>%
+            i.check.respondent_name = land_respondent_phone_name,
+            i.check.respondent_phone_number = land_respondent_phone_number) %>%
      batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "") %>% 
+     rename_with(~str_replace(string = .x, pattern = "land", replacement = "")) %>% 
      select(-c(uuid))
 
  
@@ -365,13 +366,13 @@ df_combined_checks <- bind_rows(checks)
                               "contact_details" = contact_details)
  
  
- # write_csv(x = list_of_output_files, file = paste0("outputs/", butteR::date_file_prefix(), 
-                                                   # "_combined_checks_land_energy.csv"), na = "")
+  # write_csv(x = list_of_output_files, file = paste0("outputs/", butteR::date_file_prefix(), 
+                        # "_combined_checks_land_energy.csv"), na = "")
  
  openxlsx::write.xlsx(x = list_of_output_files,
                       file = paste0("outputs/", butteR::date_file_prefix(), 
                                     "_combined_checks_land_energy.xlsx"), 
-                      overwrite = TRUE, keepNA = TRUE, na.string = "NA")
+                      overwrite = TRUE, keepNA = TRUE, na.string = "")
  
  
  
