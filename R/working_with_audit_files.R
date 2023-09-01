@@ -4,6 +4,7 @@ library(lubridate)
 # main data ---------------------------------------------------------------
 
 df_main_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") |> 
+    rename_with(~str_replace(string = .x, pattern = "meta_", replacement = "")) |> 
     mutate(start = lubridate::as_datetime(start),
            end = lubridate::as_datetime(end),
            main_survey_time_interval = lubridate::time_length(end - start, unit = "min"), 
@@ -64,10 +65,12 @@ df_qn_time_enum_means <- df_audit_data |>
 # main survey and audit time comparison -----------------------------------
 df_main_and_audit_times <- df_audit_data |> 
     group_by(audit_uuid) |>
-    summarise(audit_survey_time_interval = sum(qn_time_interval, na.rm = TRUE) / 60) |> 
+    summarise(audit_survey_time_interval = ceiling(sum(qn_time_interval, na.rm = TRUE) / 60)) |> 
     left_join(y = df_main_data_support_audit, by = c("audit_uuid" = "uuid")) |>
-    mutate()
+    mutate(main_and_audit_timme_diff = main_survey_time_interval - audit_survey_time_interval) |> 
+    relocate(audit_survey_time_interval, .after = point_number)
 
+# list of datasets
 list_audit_summary_data <- list("interval outliers" = df_potential_audit_outliers,
                            "interval outliers per survey" = df_time_interval_outliers_per_survey,
                            "interval outliers per enum" = df_time_interval_outliers_per_enumerator,
