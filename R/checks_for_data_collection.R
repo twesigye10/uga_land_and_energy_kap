@@ -9,7 +9,7 @@ library(cluster)
 
 
 # load data
-df_tool_data <- readxl::read_excel("inputs/UGA2305_land__and_energy_testing_data.xlsx") %>% 
+df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %>% 
     rename_with(~str_replace(string = .x, pattern = "meta_", replacement = "")) %>% 
     mutate(i.check.uuid = `_uuid`,
            i.check.start_date = as_date(start),
