@@ -7,6 +7,7 @@ library(butteR)
 library(sf)
 library(cluster)
 
+source("R/support_functions.R")
 
 # load data
 df_tool_data <- readxl::read_excel("inputs/UGA2305_land__and_energy_testing_data.xlsx") %>% 
@@ -231,7 +232,7 @@ add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_kap_know
  add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_kap_regular_briquette_usage_4")
  
  
- # The respondent says briquettes are one of their main cooking fuels, but says they do not use briquettes regularly (at least once a week).i.e,
+ # The respondent says briquettes are not one of their main cooking fuels, but says they do use briquettes regularly (at least once a week).i.e,
  # kap_regular_briquette_usage = "no", and kap_fuels_mostly_used = "briquettes"
  df_kap_regular_briquette_usage_no_5 <- df_tool_data %>% 
      filter(kap_regular_briquette_usage %in% c("no"), 
@@ -376,5 +377,41 @@ df_combined_checks <- bind_rows(checks)
  
  
  
+ # similarity and silhouette analysis --------------------------------------
  
+ # silhouette analysis
+ 
+ # NOTE: the column for "col_admin" is kept in the data
+ # omit_cols_sil <- c("start", "end", "today", "duration", "duration_minutes", 
+ #                    "instruction_note", "consent_note",  "consent","note", "land_livelihoods",
+ #                    "deviceid", "audit", "audit_URL", "instance_name", "end_survey","district_name", "kap_climate_change_and_adaptation_note",
+ #                    "demo_check", "kap_cooking_or_stove_note","kap_briquettes_usage_note","kap_dry_cell_battery_usage_note", "kap_solar_usage_note","kap_environemnt_degradation_note", 
+ #                    "mdd_note", "kap_climate_change_observations_note", "kap_understanding_climate_change_note", "interview_feedback_note",
+ #                    "end_note", "geopoint", "_geopoint_latitude", "_geopoint_altitude", "_geopoint_precision", "_id" ,"_submission_time","_validation_status","_notes","_status","_submitted_by","_tags","_index","Too short", "pmi_issues",
+ #                    "i.check.enumerator_id")
+ # 
+ # data_similartiy_sil <- df_tool_data %>% 
+ #     select(- any_of(omit_cols_sil))
+ # 
+ # df_sil_data <- calculateEnumeratorSimilarity(data = data_similartiy_sil,
+ #                                              input_df_survey = df_survey, 
+ #                                              col_enum = "enumerator_id",
+ #                                              col_admin = "district_name") %>% 
+ #     mutate(si2= abs(si))
+ # 
+ # df_sil_data[order(df_sil_data$`si2`, decreasing = TRUE),!colnames(df_sil_data)%in%"si2"] %>%  
+ #     openxlsx::write.xlsx(paste0("outputs/", butteR::date_file_prefix(), "_silhouette_analysis_livelihood.xlsx"))
+ # 
+ # 
+ # # similarity analysis
+ # 
+ # data_similartiy <- df_tool_data %>% 
+ #     select(- any_of(c(omit_cols_sil, "location")))
+ # 
+ # df_sim_data <- calculateDifferences(data = data_similartiy, 
+ #                                     input_df_survey = df_survey) %>% 
+ #     openxlsx::write.xlsx(paste0("outputs/", butteR::date_file_prefix(), 
+ #                                 "_most_similar_analysis_livelihood.xlsx"))
+ # 
+ # 
  
