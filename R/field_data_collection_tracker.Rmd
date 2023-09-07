@@ -71,7 +71,7 @@ df_tool_data <- readxl::read_excel("../inputs/UGA2305_land_and_energy_data.xlsx"
          latitude = as.numeric(`_geopoint_latitude`),
          longitude = as.numeric(`_geopoint_longitude`),
          refugee_settlement = ifelse(refugee_settlement == "adjumani", str_to_lower(refugee_settlement_zone), refugee_settlement)) %>% 
-  filter(start_date > as_date("2023-08-21"))
+  filter(start_date > as_date("2023-09-05"))
          # !str_detect(string = point_number, pattern = fixed('test', ignore_case = TRUE))
   
 # days that contain data
@@ -81,7 +81,7 @@ df_data_support_cl_log <- df_tool_data %>%
   select(uuid, status, sub_county_div,	refugee_settlement, latitude,	longitude )
 
 # cleaning log handling
-df_cl_log <- read_csv(file = "../inputs/combined_checks_child.csv") %>% 
+df_cl_log <- read_csv(file = "../inputs/combined_checks.csv") %>% 
   mutate(adjust_log = ifelse(is.na(adjust_log), "apply_suggested_change", adjust_log)) %>% 
   left_join(df_data_support_cl_log, by = "uuid")
 
@@ -254,6 +254,7 @@ df_gender_disaggregation_refugee <-  df_tool_data %>%
     replace(is.na(.),0) %>% 
     mutate(percentage_male = male/sum(female, male)*100,
            percentage_female = female/sum(female, male)*100) %>% 
+    mutate(across(where(is.numeric), round, 0)) %>% 
     rename_with(~str_replace(string = .x, pattern = "percentage_female", replacement = "female(%)")) %>% 
     rename_with(~str_replace( string = .x, pattern = "percentage_male", replacement = "male(%)")) 
 
@@ -268,8 +269,9 @@ df_gender_disaggregation_host <-  df_tool_data %>%
     pivot_wider(names_from = respondent_gender,
                  values_from = n) %>% 
     replace(is.na(.),0) %>% 
-    mutate(percentage_male = male/sum(female, male)*100,
+    mutate(percentage_male = male/sum(female, male)*100, 
            percentage_female = female/sum(female, male)*100) %>% 
+    mutate(across(where(is.numeric), round, 0)) %>%  
     rename_with(~str_replace(string = .x, pattern = "percentage_female", replacement = "female(%)")) %>% 
     rename_with(~str_replace( string = .x, pattern = "percentage_male", replacement = "male(%)")) 
 
