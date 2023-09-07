@@ -11,6 +11,7 @@ source("R/support_functions.R")
 
 # load data
 df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %>% 
+    select(!meta_point_number) %>% 
     rename_with(~str_replace(string = .x, pattern = "meta_", replacement = "")) %>% 
     mutate(i.check.uuid = `_uuid`,
            i.check.start_date = as_date(start),
@@ -19,7 +20,7 @@ df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %
            i.check.point_number = point_number,
            start = as_datetime(start),
            end = as_datetime(end)) %>% 
-    filter(as_date(start) > "21-08-2023")
+    filter(as_date(start) > "2023-09-05")
 
 df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "survey") 
     
@@ -54,7 +55,7 @@ checks <- list()
  # no consent --------------------------------------------------------------
  # check no consent but data submitted
  df_no_consent <- df_tool_data %>% 
-     filter(consent == "no_consent") %>% 
+     filter(consent == "no") %>% 
      mutate(i.check.type = "remove_survey",
             i.check.name = "consent",
             i.check.current_value = as.character(consent),
@@ -354,7 +355,7 @@ df_combined_checks <- bind_rows(checks)
             i.check.point_number = point_number,
             i.check.hh_has_access_to_additional_land = land_hh_have_access_to_additional_land,
             i.check.hh_ever_attempt_access_additional_land = land_hh_ever_attempt_access_additional_land,
-            i.check.respondent_name = land_respondent_phone_name,
+            i.check.respondent_name = land_respondent_name,
             i.check.respondent_phone_number = land_respondent_phone_number) %>%
      batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "") %>% 
      rename_with(~str_replace(string = .x, pattern = "land", replacement = "")) %>% 
