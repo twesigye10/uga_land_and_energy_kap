@@ -11,7 +11,7 @@ source("R/support_functions.R")
 
 # load data
 df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %>% 
-    select(!meta_point_number) %>% 
+    # select(!meta_point_number) %>% 
     rename_with(~str_replace(string = .x, pattern = "meta_", replacement = "")) %>% 
     mutate(i.check.uuid = `_uuid`,
            i.check.start_date = as_date(start),
@@ -103,15 +103,33 @@ checks <- list()
  }
  
  # duplicate point numbers
-  df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
-                                                     input_enumerator_id_col = "enumerator_id",
-                                                     input_location_col = "district_name",
-                                                     input_point_id_col = "point_number",
-                                                     input_sample_pt_nos_list = sample_pt_nos)
+ #   df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
+ #                                                     input_enumerator_id_col = "enumerator_id",
+ #                                                     input_location_col = "location",
+ #                                                     input_point_id_col = "point_number",
+ #                                                     input_sample_pt_nos_list = sample_pt_nos)
+ # 
+ # add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
  
+ df_duplicate_pt_nos <- df_tool_data %>% 
+     filter(duplicated(point_number)) %>% 
+     mutate(i.check.type = "remove_survey",
+            i.check.name = "point_number",
+            i.check.current_value = point_number,
+            i.check.value = "",
+            i.check.issue_id = "logic_c_hh_id_duplicated_10",
+            i.check.issue = glue("point_number: {point_number}, point_number duplicated"),
+            i.check.other_text = "",
+            i.check.checked_by = "MT",
+            i.check.checked_date = as_date(today()),
+            i.check.comment = "", 
+            i.check.reviewed = "",
+            i.check.adjust_log = "",
+            i.check.so_sm_choices = "") %>% 
+     batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
  add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
  
- 
+
  # point number does not exist in sample
  
  df_pt_number_not_in_sample <- check_pt_number_not_in_samples(input_tool_data = df_tool_data,
@@ -121,6 +139,9 @@ checks <- list()
                                                               input_sample_pt_nos_list = sample_pt_nos)
  
  add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_pt_number_not_in_sample")
+ 
+ 
+ 
  
  
  # check for exceeded threshold distance
@@ -343,6 +364,16 @@ df_combined_checks <- bind_rows(checks)
      relocate(label, .after = name) %>% 
      mutate(FO_comment = "") %>% 
      relocate(FO_comment, .after = comment) 
+ 
+ # adding status column to the log
+ # df_tool_data_status <- df_tool_data %>% 
+ #     select(i.check.uuid, status, consent)
+ # 
+ # df_combined_checks_plus_status <- df_combined_checks_plus_label %>% 
+ # left_join(df_tool_data_status, by = c("uuid" = "i.check.uuid")) %>% 
+ #     relocate(status, .after = district_name) %>% 
+ #        relocate(consent, .after = status) 
+ # 
       
   # contact details for hhs agreed for IDI (independent file)
  contact_details <- df_tool_data %>% 
