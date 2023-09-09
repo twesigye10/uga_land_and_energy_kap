@@ -186,7 +186,8 @@ df_kap_stove_type_owned_1 <- df_tool_data %>%
 # kap_knowledge_to_build_improved_stoves = "yes", and kap_stove_type_owned = "everything except the improved stove"
 df_kap_knowledge_to_build_improved_stoves_2 <- df_tool_data %>% 
     filter(kap_knowledge_to_build_improved_stoves %in% c("yes"), 
-   !str_detect(string = kap_stove_type_owned, pattern = "a_fuel_efficient_cookstove"))%>% 
+    str_detect(string = kap_stove_type_owned, pattern = "three_stone_fire_open|traditional_mudclay_stove|
+               traditional_ironmetal_stove"))%>% 
     mutate(i.check.type = "change_response",
            i.check.name = "kap_knowledge_to_build_improved_stoves", 
            i.check.current_value = kap_knowledge_to_build_improved_stoves,
