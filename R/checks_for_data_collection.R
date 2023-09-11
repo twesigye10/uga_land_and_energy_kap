@@ -11,7 +11,6 @@ source("R/support_functions.R")
 
 # load data
 df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %>% 
-    # select(!meta_point_number) %>% 
     rename_with(~str_replace(string = .x, pattern = "meta_", replacement = "")) %>% 
     mutate(i.check.uuid = `_uuid`,
            i.check.start_date = as_date(start),
@@ -19,15 +18,13 @@ df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %
            i.check.district_name = district_name,
            i.check.point_number = point_number,
            start = as_datetime(start),
-           end = as_datetime(end)) %>% 
-    filter(as_date(start) > "2023-09-05")
+           end = as_datetime(end))
 
 df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "survey") 
     
 df_choices <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "choices")
 
 df_sample_data <- sf::st_read("inputs/land_energy_settlement_host_samples.gpkg", quiet = TRUE)
-
 
 # output holder -----------------------------------------------------------
 checks <- list()
@@ -103,32 +100,14 @@ checks <- list()
  }
  
  # duplicate point numbers
- #   df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
- #                                                     input_enumerator_id_col = "enumerator_id",
- #                                                     input_location_col = "location",
- #                                                     input_point_id_col = "point_number",
- #                                                     input_sample_pt_nos_list = sample_pt_nos)
- # 
- # add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
- 
- df_duplicate_pt_nos <- df_tool_data %>% 
-     filter(duplicated(point_number)) %>% 
-     mutate(i.check.type = "remove_survey",
-            i.check.name = "point_number",
-            i.check.current_value = point_number,
-            i.check.value = "",
-            i.check.issue_id = "logic_c_hh_id_duplicated_10",
-            i.check.issue = glue("point_number: {point_number}, point_number duplicated"),
-            i.check.other_text = "",
-            i.check.checked_by = "MT",
-            i.check.checked_date = as_date(today()),
-            i.check.comment = "", 
-            i.check.reviewed = "",
-            i.check.adjust_log = "",
-            i.check.so_sm_choices = "") %>% 
-     batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
+   df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
+                                                     input_enumerator_id_col = "enumerator_id",
+                                                     input_location_col = "district_name",
+                                                     input_point_id_col = "point_number",
+                                                     input_sample_pt_nos_list = sample_pt_nos)
+
  add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
- 
+
 
  # point number does not exist in sample
  
@@ -137,12 +116,9 @@ checks <- list()
                                                               input_location_col = "district_name",
                                                               input_point_id_col = "point_number",
                                                               input_sample_pt_nos_list = sample_pt_nos)
- 
+
  add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_pt_number_not_in_sample")
- 
- 
- 
- 
+
  
  # check for exceeded threshold distance
  
@@ -186,8 +162,8 @@ df_kap_stove_type_owned_1 <- df_tool_data %>%
 # kap_knowledge_to_build_improved_stoves = "yes", and kap_stove_type_owned = "everything except the improved stove"
 df_kap_knowledge_to_build_improved_stoves_2 <- df_tool_data %>% 
     filter(kap_knowledge_to_build_improved_stoves %in% c("yes"), 
-    str_detect(string = kap_stove_type_owned, pattern = "three_stone_fire_open|traditional_mudclay_stove|
-               traditional_ironmetal_stove"))%>% 
+    !str_detect(string = kap_stove_type_owned, pattern = "gasifier_stove|kerosene_stove|impr_mud_stove|impr_charcoal_stove|
+               impr_ceramic_stove|solar_cookstove"))%>% 
     mutate(i.check.type = "change_response",
            i.check.name = "kap_knowledge_to_build_improved_stoves", 
            i.check.current_value = kap_knowledge_to_build_improved_stoves,
@@ -366,17 +342,7 @@ df_combined_checks <- bind_rows(checks)
      mutate(FO_comment = "") %>% 
      relocate(FO_comment, .after = comment) 
  
- # adding status column to the log
- # df_tool_data_status <- df_tool_data %>% 
- #     select(i.check.uuid, status, consent)
- # 
- # df_combined_checks_plus_status <- df_combined_checks_plus_label %>% 
- # left_join(df_tool_data_status, by = c("uuid" = "i.check.uuid")) %>% 
- #     relocate(status, .after = district_name) %>% 
- #        relocate(consent, .after = status) 
- # 
-      
-  # contact details for hhs agreed for IDI (independent file)
+   # contact details for hhs agreed for IDI (independent file)
  contact_details <- df_tool_data %>% 
      filter(land_agree_to_idi_interview %in% c("yes")) %>% 
      mutate(i.check.start_date = as_date(start),
