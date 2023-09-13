@@ -6,7 +6,7 @@ library(openxlsx)
 options("openxlsx.borderStyle" = "thin")
 # options("openxlsx.borderColour" = "#4F81BD")
 options("openxlsx.withFilter" = TRUE)
-
+options("openxlsx.dateFormat" = "dd/mm/yyyy")
 # main data ---------------------------------------------------------------
 
 df_main_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") |> 
@@ -18,7 +18,7 @@ df_main_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") |
 
 # ********************* consider data that is not in deletion log // to be handled later
 df_main_data_support_audit <- df_main_data |> 
-    select(uuid = `_uuid`, enumerator_id, district_name, point_number, main_survey_time_interval)
+    select(uuid = `_uuid`, enumerator_id, district_name, status, point_number, main_survey_time_interval)
 
 # read audit files --------------------------------------------------------
 
@@ -44,6 +44,7 @@ df_check_audit_outliers <- cleaningtools::check_outliers(dataset = df_audit_data
 df_potential_audit_outliers <- df_check_audit_outliers$potential_outliers|> 
     separate_wider_delim(cols = uuid, delim = " * ", names = c("audit_uuid", "audit_qn")) |> 
     filter(!str_detect(string = audit_qn, pattern = "_note$|_other$")) |> 
+    mutate(issue = "outlier qn time (seconds)") |> 
     select(-question) |> 
     rename(qn_time_interval = old_value)
 # cols to add enumerator, district, location/settlement
@@ -71,11 +72,13 @@ df_qn_time_enum_means <- df_audit_data |>
 
 # main survey and audit time comparison -----------------------------------
 df_main_and_audit_times <- df_audit_data |> 
-    group_by(audit_uuid) |>
+    mutate(start_date = as_date(audit_start)) |> 
+    group_by(audit_uuid, start_date) |>
     summarise(audit_survey_time_interval = ceiling(sum(qn_time_interval, na.rm = TRUE) / 60)) |> 
     left_join(y = df_main_data_support_audit, by = c("audit_uuid" = "uuid")) |>
     mutate(main_and_audit_timme_diff = main_survey_time_interval - audit_survey_time_interval) |> 
-    relocate(audit_survey_time_interval, .after = point_number)
+    relocate(audit_survey_time_interval, .after = point_number) |> 
+    ungroup()
 
 
 # export audit data -------------------------------------------------------
@@ -94,12 +97,17 @@ hs2 <- createStyle(fgFill = "#808080", halign = "CENTER", textDecoration = "Bold
 hs3 <- createStyle(fgFill = "#EE5859", halign = "CENTER", textDecoration = "Bold", border = "Bottom", fontColour = "white")
 rowhs <- createStyle(fontColour = "#9C0006", bgFill = "#FFC7CE")
 
+# numbers and dates
+number_2digit_style <- openxlsx::createStyle(numFmt = "0.00")
+number_1digit_style <- openxlsx::createStyle(numFmt = "0.0")
+date_style <- openxlsx::createStyle(numFmt = "dd/mm/yyyy")
+
 # write data
 var_sheet_name <- "time diff main and audit"
 addWorksheet(wb, sheetName = var_sheet_name)
 setColWidths(wb = wb, sheet = var_sheet_name, cols = 1, widths = 37)
-setColWidths(wb = wb, sheet = var_sheet_name, cols = 2:4, widths = 18)
-setColWidths(wb = wb, sheet = var_sheet_name, cols = 5:7, widths = 30)
+setColWidths(wb = wb, sheet = var_sheet_name, cols = 2:6, widths = 18)
+setColWidths(wb = wb, sheet = var_sheet_name, cols = 7:9, widths = 30)
 writeDataTable(wb = wb, 
                sheet = var_sheet_name, 
                x = df_main_and_audit_times, 
@@ -107,7 +115,9 @@ writeDataTable(wb = wb,
                startCol = 1, 
                tableStyle = "TableStyleLight9", 
                headerStyle = hs3)
-conditionalFormatting(wb = wb, sheet = var_sheet_name, cols=1:7,rows = 2:nrow(df_main_and_audit_times), rule="AND($E2<20, $F2>20)", style = rowhs)
+conditionalFormatting(wb = wb, sheet = var_sheet_name, 
+                      cols=1:9,rows = 2:nrow(df_main_and_audit_times), 
+                      rule="AND($G2<20, $H2>20)", style = rowhs)
 
 var_sheet_name <- "average time per qn and enum"
 addWorksheet(wb, sheetName = var_sheet_name)
@@ -125,8 +135,7 @@ writeDataTable(wb = wb,
 var_sheet_name <- "interval outliers"
 addWorksheet(wb, sheetName = var_sheet_name)
 setColWidths(wb = wb, sheet = var_sheet_name, cols = 1, widths = 37)
-setColWidths(wb = wb, sheet = var_sheet_name, cols = 2, widths = 50)
-setColWidths(wb = wb, sheet = var_sheet_name, cols = 3, widths = 30)
+setColWidths(wb = wb, sheet = var_sheet_name, cols = 2:3, widths = 50)
 setColWidths(wb = wb, sheet = var_sheet_name, cols = 4, widths = 20)
 writeDataTable(wb = wb, 
                sheet = var_sheet_name, 
@@ -162,3 +171,36 @@ writeDataTable(wb = wb,
 
 saveWorkbook(wb, paste0("outputs/", butteR::date_file_prefix(),"_formatted_audit_summary_land_and_energy.xlsx"), overwrite = TRUE)
 openXL(file = paste0("outputs/", butteR::date_file_prefix(),"_formatted_audit_summary_land_and_energy.xlsx"))
+
+
+
+# extra audit log ---------------------------------------------------------
+
+df_extra_audit_log <- df_main_and_audit_times |>  
+    filter(audit_survey_time_interval < 20, main_survey_time_interval >= 20) |>  
+    mutate(i.check.uuid = audit_uuid,
+           i.check.start_date = start_date,
+           i.check.enumerator_id = as.character(enumerator_id),
+           i.check.district_name = district_name,
+           i.check.point_number = point_number,
+           i.check.type = "remove_survey",
+           i.check.name = "",
+           i.check.current_value = "",
+           i.check.value = "",
+           i.check.issue_id = "less_survey_time",
+           i.check.issue = glue::glue("audit survey time: {audit_survey_time_interval}, main data survey time: {main_survey_time_interval}"),
+           i.check.other_text = "",
+           i.check.checked_by = "MT",
+           i.check.checked_date = as_date(today()),
+           i.check.comment = "", 
+           i.check.reviewed = "1",
+           i.check.adjust_log = "",
+           i.check.so_sm_choices = "") |>  
+    batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "") |> 
+    mutate(label = "",
+           FO_comment = "") |> 
+    relocate(label, .after = name) |>
+    relocate(FO_comment, .after = comment)
+
+write_csv(x = df_extra_audit_log, file = paste0("outputs/", butteR::date_file_prefix(), 
+                                                           "_extra_audit_checks_land_energy.csv"), na = "")
