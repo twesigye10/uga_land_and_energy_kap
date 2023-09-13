@@ -77,7 +77,8 @@ df_main_and_audit_times <- df_audit_data |>
     summarise(audit_survey_time_interval = ceiling(sum(qn_time_interval, na.rm = TRUE) / 60)) |> 
     left_join(y = df_main_data_support_audit, by = c("audit_uuid" = "uuid")) |>
     mutate(main_and_audit_timme_diff = main_survey_time_interval - audit_survey_time_interval) |> 
-    relocate(audit_survey_time_interval, .after = point_number)
+    relocate(audit_survey_time_interval, .after = point_number) |> 
+    ungroup()
 
 
 # export audit data -------------------------------------------------------
@@ -170,3 +171,36 @@ writeDataTable(wb = wb,
 
 saveWorkbook(wb, paste0("outputs/", butteR::date_file_prefix(),"_formatted_audit_summary_land_and_energy.xlsx"), overwrite = TRUE)
 openXL(file = paste0("outputs/", butteR::date_file_prefix(),"_formatted_audit_summary_land_and_energy.xlsx"))
+
+
+
+# extra audit log ---------------------------------------------------------
+
+df_extra_audit_log <- df_main_and_audit_times |>  
+    filter(audit_survey_time_interval < 20, main_survey_time_interval >= 20) |>  
+    mutate(i.check.uuid = audit_uuid,
+           i.check.start_date = start_date,
+           i.check.enumerator_id = as.character(enumerator_id),
+           i.check.district_name = district_name,
+           i.check.point_number = point_number,
+           i.check.type = "remove_survey",
+           i.check.name = "",
+           i.check.current_value = "",
+           i.check.value = "",
+           i.check.issue_id = "less_survey_time",
+           i.check.issue = glue::glue("audit survey time: {audit_survey_time_interval}, main data survey time: {main_survey_time_interval}"),
+           i.check.other_text = "",
+           i.check.checked_by = "MT",
+           i.check.checked_date = as_date(today()),
+           i.check.comment = "", 
+           i.check.reviewed = "1",
+           i.check.adjust_log = "",
+           i.check.so_sm_choices = "") |>  
+    batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "") |> 
+    mutate(label = "",
+           FO_comment = "") |> 
+    relocate(label, .after = name) |>
+    relocate(FO_comment, .after = comment)
+
+write_csv(x = df_extra_audit_log, file = paste0("outputs/", butteR::date_file_prefix(), 
+                                                           "_extra_audit_checks_land_energy.csv"), na = "")
