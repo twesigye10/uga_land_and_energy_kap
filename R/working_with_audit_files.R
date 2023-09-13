@@ -1,6 +1,10 @@
 library(tidyverse)
 library(lubridate)
 library(openxlsx)
+library(httr)
+
+source("R/support_functions.R")
+source("support_files/credentials.R")
 
 # global options can be set to further simplify things
 options("openxlsx.borderStyle" = "thin")
@@ -15,6 +19,13 @@ df_main_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") |
            end = lubridate::as_datetime(end),
            main_survey_time_interval = lubridate::time_length(end - start, unit = "min"), 
            main_survey_time_interval = ceiling(main_survey_time_interval))
+
+# download audit files
+download_audit_files(df = df_main_data, 
+                     uuid_column = "_uuid", 
+                     audit_dir = "inputs/audit_files", 
+                     usr = user_acc, 
+                     pass = user_pss)
 
 # ********************* consider data that is not in deletion log // to be handled later
 df_main_data_support_audit <- df_main_data |> 
