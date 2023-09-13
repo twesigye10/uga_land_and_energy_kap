@@ -44,6 +44,7 @@ df_check_audit_outliers <- cleaningtools::check_outliers(dataset = df_audit_data
 df_potential_audit_outliers <- df_check_audit_outliers$potential_outliers|> 
     separate_wider_delim(cols = uuid, delim = " * ", names = c("audit_uuid", "audit_qn")) |> 
     filter(!str_detect(string = audit_qn, pattern = "_note$|_other$")) |> 
+    mutate(issue = "outlier") |> 
     select(-question) |> 
     rename(qn_time_interval = old_value)
 # cols to add enumerator, district, location/settlement
@@ -126,8 +127,7 @@ var_sheet_name <- "interval outliers"
 addWorksheet(wb, sheetName = var_sheet_name)
 setColWidths(wb = wb, sheet = var_sheet_name, cols = 1, widths = 37)
 setColWidths(wb = wb, sheet = var_sheet_name, cols = 2, widths = 50)
-setColWidths(wb = wb, sheet = var_sheet_name, cols = 3, widths = 30)
-setColWidths(wb = wb, sheet = var_sheet_name, cols = 4, widths = 20)
+setColWidths(wb = wb, sheet = var_sheet_name, cols = 3:4, widths = 20)
 writeDataTable(wb = wb, 
                sheet = var_sheet_name, 
                x = df_potential_audit_outliers, 
