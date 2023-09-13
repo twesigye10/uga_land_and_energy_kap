@@ -61,7 +61,7 @@ df_host_samples_required <- df_host_samples %>%
          sub_county_div = str_replace_all(string = sub_county_div, pattern = " ", replacement = "_")
   )
 
-df_tool_data <- readxl::read_excel("../inputs/UGA2305_land_and_energy_data_merged.xlsx") %>% 
+df_tool_data <- readxl::read_excel("../inputs/merged_data.xlsx") %>% 
   rename_with(~str_replace(string = .x, pattern = "meta_", replacement = "")) %>% 
   mutate(uuid = `_uuid`,
          start_date = as_date(start),
@@ -70,8 +70,7 @@ df_tool_data <- readxl::read_excel("../inputs/UGA2305_land_and_energy_data_merge
          sub_county_div = as.character(sub_county_div),
          latitude = as.numeric(`_geopoint_latitude`),
          longitude = as.numeric(`_geopoint_longitude`),
-         refugee_settlement = ifelse(refugee_settlement == "adjumani", str_to_lower(refugee_settlement_zone), refugee_settlement)) %>% 
-  filter(start_date > as_date("2023-09-05"))
+         refugee_settlement = ifelse(refugee_settlement == "adjumani", str_to_lower(refugee_settlement_zone), refugee_settlement)) 
          # !str_detect(string = point_number, pattern = fixed('test', ignore_case = TRUE))
   
 # days that contain data
