@@ -70,10 +70,17 @@ df_tool_data <- readxl::read_excel("../inputs/merged_data.xlsx") %>%
          sub_county_div = as.character(sub_county_div),
          latitude = as.numeric(`_geopoint_latitude`),
          longitude = as.numeric(`_geopoint_longitude`),
-         refugee_settlement = ifelse(refugee_settlement == "adjumani", str_to_lower(refugee_settlement_zone), refugee_settlement)) 
-         # !str_detect(string = point_number, pattern = fixed('test', ignore_case = TRUE))
-  
-# days that contain data
+         refugee_settlement = ifelse(refugee_settlement == "adjumani", 
+                                     str_to_lower(refugee_settlement_zone), refugee_settlement),
+         sub_county_div = case_when(sub_county_div == "ngarama" & (start_date == as_date("2023-09-14") |
+                                                                         start_date == as_date("2023-09-15") |
+                                                                         start_date == as_date("2023-09-16"))~"oru_ngarama",
+                                      sub_county_div == "kabingo" & (start_date >= as_date("2023-09-14")) ~
+                                          "oru_kabingo", TRUE ~ sub_county_div)) %>%
+    filter(!str_detect(string = point_number, pattern = fixed('test', ignore_case = TRUE)) & 
+               !uuid %in% c("bbf72f6e-2248-44de-9666-75304e050242")) 
+    
+   # days that contain data
 df_days_for_data_collection <- df_tool_data %>% select(start_date) %>% unique() %>% arrange(start_date) %>% pull()
 
 df_data_support_cl_log <- df_tool_data %>% 
@@ -81,7 +88,8 @@ df_data_support_cl_log <- df_tool_data %>%
 
 # cleaning log handling
 df_cl_log <- read_csv(file = "../inputs/combined_checks.csv") %>% 
-  mutate(adjust_log = ifelse(is.na(adjust_log), "apply_suggested_change", adjust_log)) %>% 
+    filter(!issue_id == "logic_m_testing_data") %>% 
+    mutate(adjust_log = ifelse(is.na(adjust_log), "apply_suggested_change", adjust_log)) %>% 
   left_join(df_data_support_cl_log, by = "uuid")
 
 # change_response logs that affect stats in the data collection progress
@@ -332,7 +340,7 @@ df_cl_log %>%
 ```{r, echo = FALSE}
 df_cl_log %>% 
   filter(type == "remove_survey", reviewed == 1, adjust_log != "delete_log") %>% 
-  group_by(district_name, enumerator_id) %>% 
+  group_by(district_name, location, enumerator_id) %>% 
   summarise(number_of_surveys_for_deletion_by_enumerator = n()) %>%
   dt_options_fewcols()
 ```
