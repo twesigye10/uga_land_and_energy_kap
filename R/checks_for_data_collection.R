@@ -69,6 +69,28 @@ df_no_consent <- df_tool_data %>%
     batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
 add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_no_consent")
 
+# testing_data
+df_testing_data <- df_tool_data %>%
+    filter(i.check.start_date == as_date("2023-09-13") & refugee_settlement == "oruchinga" ) %>%
+    mutate(i.check.type = "remove_survey",
+           i.check.name = "hh_id",
+           i.check.current_value = "",
+           i.check.value = "",
+           i.check.issue_id = "logic_m_testing_data",
+           i.check.issue = "testing_data",
+           i.check.other_text = "",
+           i.check.checked_by = "",
+           i.check.checked_date = as_date(today()),
+           i.check.comment = "",
+           i.check.reviewed = "1",
+           i.check.adjust_log = "",
+           i.check.uuid_cl = "",
+           i.check.so_sm_choices = "") %>%
+    batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_testing_data")
+
+
+
 # check duplicate uuids
 df_duplicate_uuids <- checks_duplicate_uuids(input_tool_data = df_tool_data)
 
@@ -80,8 +102,16 @@ df_others_data <- extract_other_specify_data(input_tool_data = df_tool_data,
                                              input_location_col = "district_name",
                                              input_survey = df_survey, 
                                              input_choices = df_choices)
-add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_others_data")
 
+df_tool_other <- df_tool_data %>% 
+    select(i.check.uuid, point_number) %>% 
+    rename(uuid = i.check.uuid)
+
+df_other_wih_point <- df_others_data %>% 
+    left_join(df_tool_other, by = "uuid") %>% 
+    relocate(point_number, .after = district_name)
+    
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_other_wih_point")
 
 
 # spatial checks ----------------------------------------------------------
@@ -331,7 +361,20 @@ df_combined_checks_plus_label <- df_combined_checks %>%
     select(-int.name) %>%
     relocate(label, .after = name) %>% 
     mutate(FO_comment = "") %>% 
+           # location = ifelse(status = "refugee", refugee_settlement, sub_county_div)) %>% 
     relocate(FO_comment, .after = comment) 
+
+# Add location
+df_data_location  <- df_tool_data %>%  
+    select(i.check.uuid, status, sub_county_div, refugee_settlement) %>% 
+    mutate(location = ifelse(!is.na(refugee_settlement), refugee_settlement, sub_county_div)) %>% 
+    rename(uuid = i.check.uuid) %>% 
+    select(uuid, location)
+
+df_location <- df_combined_checks_plus_label %>% 
+    left_join(df_data_location, by = "uuid") %>% 
+    relocate(location, .after = district_name)
+    
 
 # contact details for hhs agreed for IDI (independent file)
 contact_details <- df_tool_data %>% 
@@ -353,11 +396,11 @@ contact_details <- df_tool_data %>%
 
 # write output
 
-list_of_output_files <- list("UGA2305_land _and_energy" = df_combined_checks_plus_label,
+list_of_output_files <- list("UGA2305_land _and_energy" = df_location,
                              "contact_details" = contact_details)
 
 
-write_csv(x = df_combined_checks_plus_label, file = paste0("outputs/", butteR::date_file_prefix(), 
+write_csv(x = df_location, file = paste0("outputs/", butteR::date_file_prefix(), 
                                                            "_combined_checks_land_energy.csv"), na = "")
 
 openxlsx::write.xlsx(x = list_of_output_files,
@@ -372,6 +415,7 @@ openxlsx::write.xlsx(x = list_of_output_files,
 # silhouette analysis
 
 # NOTE: the column for "col_admin" is kept in the data
+
 omit_cols_sil <- c("start", "end", "today", "duration", "duration_minutes",
                    "instruction_note", "consent_note",  "consent","note", "land_livelihoods",
                    "deviceid", "audit", "audit_URL", "instance_name", "end_survey","district_name", "kap_climate_change_and_adaptation_note",
@@ -380,27 +424,27 @@ omit_cols_sil <- c("start", "end", "today", "duration", "duration_minutes",
                    "end_note", "geopoint", "_geopoint_latitude", "_geopoint_altitude", "_geopoint_precision", "_id" ,"_submission_time","_validation_status","_notes","_status","_submitted_by","_tags","_index","Too short", "pmi_issues",
                    "i.check.enumerator_id")
 
-data_similartiy_sil <- df_tool_data %>%
+data_similartiy_sil <- df_tool_data %>% 
     select(- any_of(omit_cols_sil))
 
 df_sil_data <- calculateEnumeratorSimilarity(data = data_similartiy_sil,
-                                             input_df_survey = df_survey,
+                                             input_df_survey = df_survey, 
                                              col_enum = "enumerator_id",
-                                             col_admin = "district_name") %>%
+                                             col_admin = "district_name") %>% 
     mutate(si2= abs(si))
 
-df_sil_data[order(df_sil_data$`si2`, decreasing = TRUE),!colnames(df_sil_data)%in%"si2"] %>%
+df_sil_data[order(df_sil_data$`si2`, decreasing = TRUE),!colnames(df_sil_data)%in%"si2"] %>%  
     openxlsx::write.xlsx(paste0("outputs/", butteR::date_file_prefix(), "_silhouette_analysis_land_energy.xlsx"))
 
 
 # similarity analysis
 
-data_similartiy <- df_tool_data %>%
+data_similartiy <- df_tool_data %>% 
     select(- any_of(c(omit_cols_sil, "district_name")))
 
-df_sim_data <- calculateDifferences(data = data_similartiy,
-                                    input_df_survey = df_survey) %>%
-    openxlsx::write.xlsx(paste0("outputs/", butteR::date_file_prefix(),
+df_sim_data <- calculateDifferences(data = data_similartiy, 
+                                    input_df_survey = df_survey) %>% 
+    openxlsx::write.xlsx(paste0("outputs/", butteR::date_file_prefix(), 
                                 "_most_similar_analysis_land_energy.xlsx"))
 
 
