@@ -6,6 +6,7 @@ library(glue)
 library(butteR)
 library(sf)
 library(cluster)
+library(kobold)
 
 source("R/support_functions.R")
 
@@ -18,7 +19,10 @@ df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %
            i.check.district_name = district_name,
            i.check.point_number = point_number,
            start = as_datetime(start),
-           end = as_datetime(end))
+           end = as_datetime(end)) %>% 
+    mutate(i.check.point_number = case_when(i.check.point_number %in% c("bud_03") ~ "test_bud_03",
+                                            i.check.point_number %in% c("bud_17") ~ "test_bud_17",
+                                                                    TRUE ~ i.check.point_number))
 
 df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "survey") 
 
@@ -69,7 +73,83 @@ df_no_consent <- df_tool_data %>%
     batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
 add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_no_consent")
 
-# check duplicate uuids
+# testing_data
+df_testing_data <- df_tool_data %>%
+    filter(str_detect(string = point_number, pattern = fixed('test', ignore_case = TRUE))) %>%
+    mutate(i.check.type = "remove_survey",
+           i.check.name = "",
+           i.check.current_value = "",
+           i.check.value = "",
+           i.check.issue_id = "logic_m_testing_data",
+           i.check.issue = "testing_data",
+           i.check.other_text = "",
+           i.check.checked_by = "",
+           i.check.checked_date = as_date(today()),
+           i.check.comment = "",
+           i.check.reviewed = "1",
+           i.check.adjust_log = "",
+           i.check.uuid_cl = "",
+           i.check.so_sm_choices = "") %>%
+    batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_testing_data")
+
+
+# training_data
+df_training_data <- df_tool_data %>%
+    filter(i.check.uuid %in% c("44ef2446-0afb-4c05-a7cc-ba6560d02afa", "0df3336d-0bf0-4e40-b703-952d3285cec1",
+                               "95f06c28-3b2c-4f6a-a706-ce479f8ac900", "e542c894-c93c-4430-b547-4bf3173f17d9",
+                               "45534f22-04fc-4c8e-bf9c-4a9a9fb18e4a")) %>% 
+    mutate(i.check.type = "remove_survey",
+           i.check.name = "",
+           i.check.current_value = "",
+           i.check.value = "",
+           i.check.issue_id = "logic_m_training_data",
+           i.check.issue = "training_data",
+           i.check.other_text = "",
+           i.check.checked_by = "",
+           i.check.checked_date = as_date(today()),
+           i.check.comment = "",
+           i.check.reviewed = "1",
+           i.check.adjust_log = "",
+           i.check.uuid_cl = "",
+           i.check.so_sm_choices = "") %>%
+    batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_training_data")
+
+
+# checking  outliers ------------------------------------------------------
+
+df_c_outliers <- supporteR::check_outliers_cleaninginspector(input_tool_data = df_tool_data %>% 
+                                        select(-c("respondent_age", "hoh_age")) %>% 
+ filter(!kap_cost_of_cheapest_improved_stove %in% c(666, 999, 9999, 99999)),
+                                                             input_enumerator_id_col = "enumerator_id",
+                                                             input_location_col = "district_name")
+
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_c_outliers")
+
+# filtering '999' etc from stove price 
+df_stove_data_price <- df_tool_data %>%
+    filter(kap_cost_of_cheapest_improved_stove %in% c(666, 999, 9999, 99999, 0)) %>% 
+    mutate(i.check.type = "change_response",
+           i.check.name = "kap_cost_of_cheapest_improved_stove",
+           i.check.current_value = as.character(kap_cost_of_cheapest_improved_stove),
+           i.check.value = "NA",
+           i.check.issue_id = "logic_c_outlier",
+           i.check.issue = "stove_price_outliers",
+           i.check.other_text = "",
+           i.check.checked_by = "",
+           i.check.checked_date = as_date(today()),
+           i.check.comment = "",
+           i.check.reviewed = "1",
+           i.check.adjust_log = "",
+           i.check.uuid_cl = "",
+           i.check.so_sm_choices = "") %>%
+    batch_select_rename(input_selection_str = "i.check.", input_replacement_str = "")
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_stove_data_price")
+
+
+# check duplicate uuids ---------------------------------------------------
+
 df_duplicate_uuids <- checks_duplicate_uuids(input_tool_data = df_tool_data)
 
 add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_uuids")
@@ -80,55 +160,63 @@ df_others_data <- extract_other_specify_data(input_tool_data = df_tool_data,
                                              input_location_col = "district_name",
                                              input_survey = df_survey, 
                                              input_choices = df_choices)
-add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_others_data")
 
+df_tool_other <- df_tool_data %>% 
+    select(i.check.uuid, point_number) %>% 
+    rename(uuid = i.check.uuid)
+
+df_other_wih_point <- df_others_data %>% 
+    left_join(df_tool_other, by = "uuid") %>% 
+    relocate(point_number, .after = district_name)
+    
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_other_wih_point")
 
 
 # spatial checks ----------------------------------------------------------
 
-if("status" %in% colnames(df_sample_data)){
-    sample_pt_nos <- df_sample_data %>% 
-        mutate(unique_pt_number = paste0(status, "_", Name)) %>% 
-        pull(unique_pt_number) %>% 
-        unique()
-}else{
-    sample_pt_nos <- df_sample_data %>% 
-        mutate(unique_pt_number = Name) %>% 
-        pull(unique_pt_number) %>% 
-        unique()
-}
-
-# duplicate point numbers
-df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
-                                                  input_enumerator_id_col = "enumerator_id",
-                                                  input_location_col = "district_name",
-                                                  input_point_id_col = "point_number",
-                                                  input_sample_pt_nos_list = sample_pt_nos)
-
-add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
-
+# if("status" %in% colnames(df_sample_data)){
+#     sample_pt_nos <- df_sample_data %>% 
+#         mutate(unique_pt_number = paste0(status, "_", Name)) %>% 
+#         pull(unique_pt_number) %>% 
+#         unique()
+# }else{
+#     sample_pt_nos <- df_sample_data %>% 
+#         mutate(unique_pt_number = Name) %>% 
+#         pull(unique_pt_number) %>% 
+#         unique()
+# }
+# 
+# # duplicate point numbers
+# df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
+#                                                   input_enumerator_id_col = "enumerator_id",
+#                                                   input_location_col = "district_name",
+#                                                   input_point_id_col = "point_number",
+#                                                   input_sample_pt_nos_list = sample_pt_nos)
+# 
+# add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
+# 
 
 # point number does not exist in sample
 
-df_pt_number_not_in_sample <- check_pt_number_not_in_samples(input_tool_data = df_tool_data,
-                                                             input_enumerator_id_col = "enumerator_id",
-                                                             input_location_col = "district_name",
-                                                             input_point_id_col = "point_number",
-                                                             input_sample_pt_nos_list = sample_pt_nos)
-
-add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_pt_number_not_in_sample")
+# df_pt_number_not_in_sample <- check_pt_number_not_in_samples(input_tool_data = df_tool_data,
+#                                                              input_enumerator_id_col = "enumerator_id",
+#                                                              input_location_col = "district_name",
+#                                                              input_point_id_col = "point_number",
+#                                                              input_sample_pt_nos_list = sample_pt_nos)
+# 
+# add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_pt_number_not_in_sample")
 
 
 # check for exceeded threshold distance
 
-df_greater_thresh_distance <- check_threshold_distance(input_sample_data = df_sample_data,
-                                                       input_tool_data = df_tool_data,
-                                                       input_enumerator_id_col = "enumerator_id",
-                                                       input_location_col = "district_name",
-                                                       input_point_id_col = "point_number",
-                                                       input_threshold_dist = 150)
-
-add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_greater_thresh_distance")
+# df_greater_thresh_distance <- check_threshold_distance(input_sample_data = df_sample_data,
+#                                                        input_tool_data = df_tool_data,
+#                                                        input_enumerator_id_col = "enumerator_id",
+#                                                        input_location_col = "district_name",
+#                                                        input_point_id_col = "point_number",
+#                                                        input_threshold_dist = 150)
+# 
+# add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_greater_thresh_distance")
 
 
 # logical checks ----------------------------------------------------------
@@ -331,7 +419,20 @@ df_combined_checks_plus_label <- df_combined_checks %>%
     select(-int.name) %>%
     relocate(label, .after = name) %>% 
     mutate(FO_comment = "") %>% 
+           # location = ifelse(status = "refugee", refugee_settlement, sub_county_div)) %>% 
     relocate(FO_comment, .after = comment) 
+
+# Add location
+df_data_location  <- df_tool_data %>%  
+    select(i.check.uuid, status, sub_county_div, refugee_settlement) %>% 
+    mutate(location = ifelse(!is.na(refugee_settlement), refugee_settlement, sub_county_div)) %>% 
+    rename(uuid = i.check.uuid) %>% 
+    select(uuid, location)
+
+df_location <- df_combined_checks_plus_label %>% 
+    left_join(df_data_location, by = "uuid") %>% 
+    relocate(location, .after = district_name)
+    
 
 # contact details for hhs agreed for IDI (independent file)
 contact_details <- df_tool_data %>% 
@@ -353,11 +454,11 @@ contact_details <- df_tool_data %>%
 
 # write output
 
-list_of_output_files <- list("UGA2305_land _and_energy" = df_combined_checks_plus_label,
+list_of_output_files <- list("UGA2305_land _and_energy" = df_location,
                              "contact_details" = contact_details)
 
 
-write_csv(x = df_combined_checks_plus_label, file = paste0("outputs/", butteR::date_file_prefix(), 
+write_csv(x = df_location, file = paste0("outputs/", butteR::date_file_prefix(), 
                                                            "_combined_checks_land_energy.csv"), na = "")
 
 openxlsx::write.xlsx(x = list_of_output_files,
@@ -372,35 +473,37 @@ openxlsx::write.xlsx(x = list_of_output_files,
 # silhouette analysis
 
 # NOTE: the column for "col_admin" is kept in the data
+
 omit_cols_sil <- c("start", "end", "today", "duration", "duration_minutes",
                    "instruction_note", "consent_note",  "consent","note", "land_livelihoods",
-                   "deviceid", "audit", "audit_URL", "instance_name", "end_survey","district_name", "kap_climate_change_and_adaptation_note",
+                   "deviceid", "audit", "audit_URL", "instance_name", "end_survey", "kap_climate_change_and_adaptation_note",
                    "demo_check", "kap_cooking_or_stove_note","kap_briquettes_usage_note","kap_dry_cell_battery_usage_note", "kap_solar_usage_note","kap_environemnt_degradation_note",
                    "mdd_note", "kap_climate_change_observations_note", "kap_understanding_climate_change_note", "interview_feedback_note",
                    "end_note", "geopoint", "_geopoint_latitude", "_geopoint_altitude", "_geopoint_precision", "_id" ,"_submission_time","_validation_status","_notes","_status","_submitted_by","_tags","_index","Too short", "pmi_issues",
                    "i.check.enumerator_id")
 
-data_similartiy_sil <- df_tool_data %>%
+data_similartiy_sil <- df_tool_data %>% 
+    mutate(location = ifelse(status == "refugee", refugee_settlement, sub_county_div)) %>% 
     select(- any_of(omit_cols_sil))
 
 df_sil_data <- calculateEnumeratorSimilarity(data = data_similartiy_sil,
-                                             input_df_survey = df_survey,
+                                             input_df_survey = df_survey, 
                                              col_enum = "enumerator_id",
-                                             col_admin = "district_name") %>%
+                                             col_admin = "location") %>% 
     mutate(si2= abs(si))
 
-df_sil_data[order(df_sil_data$`si2`, decreasing = TRUE),!colnames(df_sil_data)%in%"si2"] %>%
+df_sil_data[order(df_sil_data$`si2`, decreasing = TRUE),!colnames(df_sil_data)%in%"si2"] %>%  
     openxlsx::write.xlsx(paste0("outputs/", butteR::date_file_prefix(), "_silhouette_analysis_land_energy.xlsx"))
 
 
 # similarity analysis
 
-data_similartiy <- df_tool_data %>%
-    select(- any_of(c(omit_cols_sil, "district_name")))
+data_similartiy <- df_tool_data %>% 
+    select(- any_of(c(omit_cols_sil, "location")))
 
-df_sim_data <- calculateDifferences(data = data_similartiy,
-                                    input_df_survey = df_survey) %>%
-    openxlsx::write.xlsx(paste0("outputs/", butteR::date_file_prefix(),
+df_sim_data <- calculateDifferences(data = data_similartiy, 
+                                    input_df_survey = df_survey) %>% 
+    openxlsx::write.xlsx(paste0("outputs/", butteR::date_file_prefix(), 
                                 "_most_similar_analysis_land_energy.xlsx"))
 
 
