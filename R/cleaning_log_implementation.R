@@ -10,7 +10,8 @@ cols_to_escape <- c("index", "start", "end", "today", "starttime",	"endtime", "_
 vars_to_remove_from_main_data <- c("deviceid", "audit", "audit_URL", "instance_name", "individual_name",
                                    "_validation_status", "_notes", "_tags", "check_ptno_insamples", "validate_ptno",
                                    "pt_num_msg", "pt_num_validation_message", "geopoint", "_geopoint_latitude",
-                                   "_geopoint_longitude", "_geopoint_altitude", "_geopoint_precision")
+                                   "_geopoint_longitude", "_geopoint_altitude", "_geopoint_precision", "pt_sample_lat",
+                                   "pt_sample_lon", "dist_btn_sample_collected")
 
 data_nms <- names(readxl::read_excel(path = "inputs/UGA2305_land_and_energy_data.xlsx", n_max = 500))
 c_types <- ifelse(str_detect(string = data_nms, pattern = "_other$"), "text", "guess")
@@ -26,8 +27,7 @@ df_cleaning_log <- read_csv("inputs/combined_checks.csv") %>%
   mutate(adjust_log = ifelse(is.na(adjust_log), "apply_suggested_change", adjust_log),
          value = ifelse(is.na(value) & str_detect(string = issue_id, pattern = "logic_c_"), "blank", value),
          value = ifelse(type %in% c("remove_survey"), "blank", value),
-         name = ifelse(name %in% c("hh_id"), "individual_name", name),
-         name = ifelse(is.na(name) & type %in% c("remove_survey"), "individual_name", name)
+         name = ifelse(is.na(name) & type %in% c("remove_survey"), "point_number", name)
   ) %>%
   filter(!is.na(value), !is.na(uuid)) %>%
   mutate(value = ifelse(value %in% c("blank"), NA, value),
@@ -37,8 +37,8 @@ df_cleaning_log <- read_csv("inputs/combined_checks.csv") %>%
   select(uuid, type, name, value, issue_id, sheet, index, relevant, issue)
 
 # survey tool
-df_survey <- readxl::read_excel(path = "inputs/UGA2305_land_and_energy_data.xlsx", sheet = "survey")
-df_choices <- readxl::read_excel(path = "inputs/UGA2305_land_and_energy_data.xlsx", sheet = "choices")
+df_survey <- readxl::read_excel(path = "inputs/land_and_energy_tool.xlsx", sheet = "survey")
+df_choices <- readxl::read_excel(path = "inputs/land_and_energy_tool.xlsx", sheet = "choices")
 
 # main dataset
 
@@ -52,14 +52,21 @@ df_cleaned_data <- supporteR::cleaning_support(input_df_raw_data = df_raw_data,
                                               input_df_cleaning_log = df_cleaning_log_dataset,
                                               input_vars_to_remove_from_data = vars_to_remove_from_main_data)
 
-df_cleaned_data_final <- df_cleaned_data %>% 
+# add composite indicator for region
+df_data_with_regional_indicator <- df_cleaned_data %>% 
+    mutate(
+        i.region = case_when(meta_district_name %in% c("isingiro", "kamwenge", "kikuube", "kyegegwa") ~ "south_west",
+                             TRUE ~ "west_nile"))
+
+# remove empty columns
+df_cleaned_data_final <- df_data_with_regional_indicator %>% 
     janitor::remove_empty(which = "cols") 
-  # select(-c(vars_to_remove_from_main_data)) %>% 
-    
-  # mutate(across(.cols = everything(), .fns = ~ ifelse(str_detect(string = ., 
-  #                                                       pattern = fixed("FALSE", ignore_case = TRUE)), "1", .))) %>% 
-  # mutate(across(.cols = everything(), .fns = ~ ifelse(str_detect(string = ., 
-  #                                                       pattern = fixed("TRUE", ignore_case = TRUE)), "0", .)))
+    # mutate(across(.cols = -c(contains(cols_to_escape)), .fns = ~ ifelse(str_detect(string = .,
+    #                                                     pattern = fixed("FALSE", ignore_case = TRUE)), "0", .))) %>%
+    # mutate(across(.cols = -c(contains(cols_to_escape)), .fns = ~ ifelse(str_detect(string = .,
+    #                                                     pattern = fixed("TRUE", ignore_case = TRUE)), "1", .)))
+
+
   
 openxlsx::write.xlsx(x = df_cleaned_data_final,
                      file = paste0("outputs/", butteR::date_file_prefix(), 
