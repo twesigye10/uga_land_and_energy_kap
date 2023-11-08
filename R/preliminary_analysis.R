@@ -125,10 +125,11 @@ full_analysis_long <- combined_analysis %>%
          population, 
          subset_1_name, 
          subset_1_val, 
-         select_type,
-         level)
+         select_type
+         )
 
 # output analysis
 write_csv(full_analysis_long, paste0("outputs/", butteR::date_file_prefix(), "_full_analysis_lf_uga_land_and_energy.csv"), na="")
 write_csv(full_analysis_long, paste0("outputs/full_analysis_lf_uga_land_and_energy.csv"), na="")
 write_csv(combined_analysis, paste0("outputs/combined_analysis_lf_uga_land_and_energy.csv"), na="")
+
