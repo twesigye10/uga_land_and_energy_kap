@@ -87,7 +87,8 @@ host_svy <- as_survey(.data = df_host_with_weights, strata = strata, weights = w
 # analysis
 
 df_host_analysis <- analysis_after_survey_creation(input_svy_obj = host_svy,
-                                                  input_dap = dap %>% filter(variable %in% colnames(df_host)) )
+                                                  input_dap = dap %>% filter(variable %in% colnames(df_host),
+                                                                             subset_1 %in% colnames(df_host)) )
 
 
 # merge and format analysis ----------------------------------------------------------
