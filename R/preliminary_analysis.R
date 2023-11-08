@@ -47,10 +47,12 @@ df_data_with_composites <- df_main_clean_data %>%
 
 # split data into host and refugee
 df_ref <- df_data_with_composites %>% 
-    filter(meta_status == "refugee")
-df_host <- df_data_with_composites %>% 
-    filter(meta_status == "host_community")
+    filter(meta_status == "refugee") %>% 
+    select(-where(function(x) all(is.na(x))))
 
+df_host <- df_data_with_composites %>% 
+    filter(meta_status == "host_community") %>% 
+    select(-where(function(x) all(is.na(x))))
 
 # analysis for refugees ---------------------------------------------------
 
@@ -67,7 +69,7 @@ ref_svy <- as_survey(.data = df_ref_with_weights, strata = strata, weights = wei
 # analysis
 
 df_ref_analysis <- analysis_after_survey_creation(input_svy_obj = ref_svy,
-                                                   input_dap = dap ) 
+                                                   input_dap = dap %>% filter(variable %in% colnames(df_ref)) ) 
 
 
 # analysis for host -------------------------------------------------------
@@ -85,7 +87,7 @@ host_svy <- as_survey(.data = df_host_with_weights, strata = strata, weights = w
 # analysis
 
 df_host_analysis <- analysis_after_survey_creation(input_svy_obj = host_svy,
-                                                  input_dap = dap )
+                                                  input_dap = dap %>% filter(variable %in% colnames(df_host)) )
 
 
 # merge and format analysis ----------------------------------------------------------
