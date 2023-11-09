@@ -69,7 +69,8 @@ ref_svy <- as_survey(.data = df_ref_with_weights, strata = strata, weights = wei
 # analysis
 
 df_ref_analysis <- analysis_after_survey_creation(input_svy_obj = ref_svy,
-                                                   input_dap = dap %>% filter(variable %in% colnames(df_ref)) ) 
+                                                   input_dap = dap %>% filter(variable %in% colnames(df_ref)) ) %>% 
+    dplyr::mutate(population = "refugee")
 
 
 # analysis for host -------------------------------------------------------
@@ -88,7 +89,8 @@ host_svy <- as_survey(.data = df_host_with_weights, strata = strata, weights = w
 
 df_host_analysis <- analysis_after_survey_creation(input_svy_obj = host_svy,
                                                   input_dap = dap %>% filter(variable %in% colnames(df_host),
-                                                                             subset_1 %in% colnames(df_host)) )
+                                                                             subset_1 %in% colnames(df_host)) ) %>% 
+    dplyr::mutate(population = "host_community")
 
 
 # merge and format analysis ----------------------------------------------------------
