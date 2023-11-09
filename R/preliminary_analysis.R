@@ -41,7 +41,9 @@ dap <- read_csv("inputs/r_dap_land_energy.csv")
 # add composites and strata
 df_data_with_composites <- df_main_clean_data %>% 
     create_composite_indicators() %>% 
-    dplyr::mutate(strata = case_when(meta_status == "refugee" ~ paste0(meta_refugee_settlement, "_refugee"),
+    dplyr::mutate(kap_cost_of_cheapest_improved_stove = as.numeric(kap_cost_of_cheapest_improved_stove),
+                  i.meta_hoh_age = as.numeric(i.meta_hoh_age),
+                  strata = case_when(meta_status == "refugee" ~ paste0(meta_refugee_settlement, "_refugee"),
                                      meta_status == "host_community" ~ paste0(meta_district_name,"_host"),
                                      TRUE ~ meta_status))
 
