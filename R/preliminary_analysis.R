@@ -43,6 +43,9 @@ df_data_with_composites <- df_main_clean_data %>%
     create_composite_indicators() %>% 
     dplyr::mutate(kap_cost_of_cheapest_improved_stove = as.numeric(kap_cost_of_cheapest_improved_stove),
                   i.meta_hoh_age = as.numeric(i.meta_hoh_age),
+                  meta_district_name = case_when(meta_status  %in% c("host_community") & meta_district_name %in% c("isingiro") & str_detect(string = point_number, pattern = "^oru_|^kak_|^kgt_" ) ~ "isingiro_oruchinga",
+                                                 meta_status  %in% c("host_community") & meta_district_name %in% c("isingiro") & str_detect(string = point_number, pattern = "^nak_|kna_|^ksh_|^rug_|^rus_" ) ~ "isingiro_nakivale",
+                                                 TRUE ~ meta_district_name),
                   strata = case_when(meta_status == "refugee" ~ paste0(meta_refugee_settlement, "_refugee"),
                                      meta_status == "host_community" ~ paste0(meta_district_name,"_host"),
                                      TRUE ~ meta_status))
