@@ -41,22 +41,29 @@ dap <- read_csv("inputs/r_dap_land_energy.csv")
 # add composites and strata
 df_data_with_composites <- df_main_clean_data %>% 
     create_composite_indicators() %>% 
-    dplyr::mutate(strata = case_when(meta_status == "refugee" ~ paste0(meta_refugee_settlement, "_refugee"),
+    dplyr::mutate(kap_cost_of_cheapest_improved_stove = as.numeric(kap_cost_of_cheapest_improved_stove),
+                  i.meta_hoh_age = as.numeric(i.meta_hoh_age),
+                  meta_district_name = case_when(meta_status  %in% c("host_community") & meta_district_name %in% c("isingiro") & str_detect(string = point_number, pattern = "^oru_|^kak_|^kgt_" ) ~ "isingiro_oruchinga",
+                                                 meta_status  %in% c("host_community") & meta_district_name %in% c("isingiro") & str_detect(string = point_number, pattern = "^nak_|kna_|^ksh_|^rug_|^rus_" ) ~ "isingiro_nakivale",
+                                                 TRUE ~ meta_district_name),
+                  strata = case_when(meta_status == "refugee" ~ paste0(meta_refugee_settlement, "_refugee"),
                                      meta_status == "host_community" ~ paste0(meta_district_name,"_host"),
-                                     TRUE ~ status))
+                                     TRUE ~ meta_status))
 
 # split data into host and refugee
 df_ref <- df_data_with_composites %>% 
-    filter(meta_status == "refugee")
-df_host <- df_data_with_composites %>% 
-    filter(meta_status == "host_community")
+    filter(meta_status == "refugee") %>% 
+    select(-where(function(x) all(is.na(x))))
 
+df_host <- df_data_with_composites %>% 
+    filter(meta_status == "host_community") %>% 
+    select(-where(function(x) all(is.na(x))))
 
 # analysis for refugees ---------------------------------------------------
 
 # weights table refugees
-ref_weight_table <- make_refugee_weight_table(input_df = df_ref, 
-                                  input_pop = df_pop_data_settlement)
+ref_weight_table <- make_refugee_weight_table(input_df_ref = df_ref, 
+                                              input_refugee_pop = df_pop_data_settlement)
 # add weights to data
 df_ref_with_weights <- df_ref %>%  
     left_join(ref_weight_table, by = "strata")
@@ -67,15 +74,15 @@ ref_svy <- as_survey(.data = df_ref_with_weights, strata = strata, weights = wei
 # analysis
 
 df_ref_analysis <- analysis_after_survey_creation(input_svy_obj = ref_svy,
-                                                   input_dap = dap ) %>% 
-    mutate(level = "Household")
+                                                   input_dap = dap %>% filter(variable %in% colnames(df_ref)) ) %>% 
+    dplyr::mutate(population = "refugee")
 
 
 # analysis for host -------------------------------------------------------
 
 # weights table refugees
-host_weight_table <- make_host_weight_table(input_df = df_host, 
-                                      input_pop = df_pop_data_host)
+host_weight_table <- make_host_weight_table(input_df_host = df_host, 
+                                            input_host_pop = df_pop_data_host)
 # add weights to data
 df_host_with_weights <- df_host %>%  
     left_join(host_weight_table, by = "strata")
@@ -86,8 +93,9 @@ host_svy <- as_survey(.data = df_host_with_weights, strata = strata, weights = w
 # analysis
 
 df_host_analysis <- analysis_after_survey_creation(input_svy_obj = host_svy,
-                                                  input_dap = dap ) %>% 
-    mutate(level = "Household")
+                                                  input_dap = dap %>% filter(variable %in% colnames(df_host),
+                                                                             subset_1 %in% colnames(df_host)) ) %>% 
+    dplyr::mutate(population = "host_community")
 
 
 # merge and format analysis ----------------------------------------------------------
@@ -100,8 +108,8 @@ end <- Sys.time()
 print(paste("Sript running time: ", (end-start)/60, "minutes"))
 
 
-integer_cols_i <- c()
-integer_cols_int <- c()
+integer_cols_i <- c("i.meta_hoh_age", "i.meta_respondent_age")
+integer_cols_int <- c("int.meta_hoh_age", "int.meta_respondent_age")
 
 # formatting the analysis, adding question labels
 full_analysis_long <- combined_analysis %>% 
@@ -112,7 +120,7 @@ full_analysis_long <- combined_analysis %>%
   mutate(variable = ifelse(variable %in% integer_cols_i, str_replace(string = variable, pattern = "i.", replacement = "int."), variable),
          select_type = ifelse(variable %in% integer_cols_int, "integer", select_type),
          label = ifelse(is.na(label), variable, label),
-         # `mean/pct` = ifelse(select_type %in% c("integer") & !variable %in% integer_cols_i & !str_detect(string = variable, pattern = "^i\\."), `mean/pct`, `mean/pct`*100),
+         `mean/pct` = ifelse(select_type %in% c("integer") & !variable %in% integer_cols_i & !str_detect(string = variable, pattern = "^i\\."), `mean/pct`, `mean/pct`*100),
          `mean/pct` = round(`mean/pct`, digits = 3)) %>% 
   mutate(variable = ifelse(variable %in% integer_cols_int, str_replace(string = variable, pattern = "int.", replacement = "i."), variable),
          label = ifelse(label %in% integer_cols_int, str_replace(string = label, pattern = "int.", replacement = "i."), label)) %>% 
@@ -124,10 +132,11 @@ full_analysis_long <- combined_analysis %>%
          population, 
          subset_1_name, 
          subset_1_val, 
-         select_type,
-         level)
+         select_type
+         )
 
 # output analysis
 write_csv(full_analysis_long, paste0("outputs/", butteR::date_file_prefix(), "_full_analysis_lf_uga_land_and_energy.csv"), na="")
 write_csv(full_analysis_long, paste0("outputs/full_analysis_lf_uga_land_and_energy.csv"), na="")
 write_csv(combined_analysis, paste0("outputs/combined_analysis_lf_uga_land_and_energy.csv"), na="")
+
