@@ -7,7 +7,8 @@ library(glue)
 
 # main dataset
 cols_to_escape <- c("index", "start", "end", "today", "starttime",	"endtime", "_submission_time", "_submission__submission_time")
-vars_to_remove_from_main_data <- c("deviceid", "audit", "audit_URL", "instance_name", "individual_name",
+vars_to_remove_from_main_data <- c("deviceid", "audit", "audit_URL", "instance_name", "individual_name", "land_respondent_name",
+                                   "land_respondent_phone_number", "point_number", 
                                    "_validation_status", "_notes", "_tags", "check_ptno_insamples", "validate_ptno",
                                    "pt_num_msg", "pt_num_validation_message", "geopoint", "_geopoint_latitude",
                                    "_geopoint_longitude", "_geopoint_altitude", "_geopoint_precision", "pt_sample_lat",
@@ -19,7 +20,6 @@ c_types <- ifelse(str_detect(string = data_nms, pattern = "_other$"), "text", "g
 df_raw_data <- readxl::read_excel(path = "inputs/UGA2305_land_and_energy_data.xlsx", col_types = c_types) %>% 
   mutate(across(.cols = -c(contains(cols_to_escape)))) %>% 
   mutate(start = as_datetime(start), end = as_datetime(end), today = as_date(as_datetime(today)))
-
 
 # cleaning log
 df_cleaning_log <- read_csv("inputs/combined_checks.csv") %>%
