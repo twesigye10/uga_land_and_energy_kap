@@ -13,6 +13,7 @@ source("R/support_functions.R")
 # load data
 df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %>% 
     rename_with(~str_replace(string = .x, pattern = "meta_", replacement = "")) %>% 
+    rename(kap_owns_improvedstove_not_use_other = kap_owns_improvedstove_not_use_reason) %>% 
     mutate(i.check.uuid = `_uuid`,
            i.check.start_date = as_date(start),
            i.check.enumerator_id = as.character(enumerator_id),
@@ -24,7 +25,8 @@ df_tool_data <- readxl::read_excel("inputs/UGA2305_land_and_energy_data.xlsx") %
                                             i.check.point_number %in% c("bud_17") ~ "test_bud_17",
                                                                     TRUE ~ i.check.point_number))
 
-df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "survey") 
+df_survey <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "survey") %>% 
+mutate(name = ifelse(name %in% c("kap_owns_improvedstove_not_use_reason"), "kap_owns_improvedstove_not_use_other", name))
 
 df_choices <- readxl::read_excel("inputs/land_and_energy_tool.xlsx", sheet = "choices")
 
