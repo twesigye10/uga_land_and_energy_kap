@@ -19,7 +19,8 @@ c_types <- ifelse(str_detect(string = data_nms, pattern = "_other$"), "text", "g
 
 df_raw_data <- readxl::read_excel(path = "inputs/UGA2305_land_and_energy_data.xlsx", col_types = c_types) %>% 
   mutate(across(.cols = -c(contains(cols_to_escape)))) %>% 
-  mutate(start = as_datetime(start), end = as_datetime(end), today = as_date(as_datetime(today)))
+  mutate(start = as_datetime(start), end = as_datetime(end), today = as_date(as_datetime(today))) %>% 
+  rename(kap_owns_improvedstove_not_use_other = kap_owns_improvedstove_not_use_reason)
 
 # cleaning log
 df_cleaning_log <- read_csv("inputs/combined_checks.csv") %>%
@@ -37,7 +38,9 @@ df_cleaning_log <- read_csv("inputs/combined_checks.csv") %>%
   select(uuid, type, name, value, issue_id, sheet, index, relevant, issue)
 
 # survey tool
-df_survey <- readxl::read_excel(path = "inputs/land_and_energy_tool.xlsx", sheet = "survey")
+df_survey <- readxl::read_excel(path = "inputs/land_and_energy_tool.xlsx", sheet = "survey") %>% 
+    mutate(name = ifelse(name %in% c("kap_owns_improvedstove_not_use_reason"), "kap_owns_improvedstove_not_use_other", name))    
+    
 df_choices <- readxl::read_excel(path = "inputs/land_and_energy_tool.xlsx", sheet = "choices")
 
 # main dataset
