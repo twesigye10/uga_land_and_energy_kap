@@ -21,7 +21,9 @@ df_pop_data_host <- read_csv("inputs/host_population.csv") %>%
 data_path <- "inputs/clean_data_land_energy.xlsx"
 
 data_nms <- names(readxl::read_excel(path = data_path, n_max = 2000))
-c_types <- ifelse(str_detect(string = data_nms, pattern = "_other$"), "text", "guess")
+c_types <- case_when(str_detect(string = data_nms, pattern = "_other$") ~ "text", 
+                     str_detect(string = data_nms, pattern = "/") ~ "logical",
+                     TRUE ~ "guess")
 
 df_main_clean_data <- readxl::read_excel(path = data_path, col_types = c_types, na = "NA")
 
