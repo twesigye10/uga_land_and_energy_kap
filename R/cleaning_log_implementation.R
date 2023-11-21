@@ -8,7 +8,7 @@ library(glue)
 # main dataset
 cols_to_escape <- c("index", "start", "end", "today", "starttime",	"endtime", "_submission_time", "_submission__submission_time")
 vars_to_remove_from_main_data <- c("deviceid", "audit", "audit_URL", "instance_name", "individual_name", "land_respondent_name",
-                                   "land_respondent_phone_number", "point_number", 
+                                   "land_respondent_phone_number",  
                                    "_validation_status", "_notes", "_tags", "check_ptno_insamples", "validate_ptno",
                                    "pt_num_msg", "pt_num_validation_message", "geopoint", "_geopoint_latitude",
                                    "_geopoint_longitude", "_geopoint_altitude", "_geopoint_precision", "pt_sample_lat",
