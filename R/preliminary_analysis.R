@@ -37,6 +37,11 @@ df_tool_data_support <- df_survey %>%
     filter(str_detect(string = type, pattern = "integer|date|select_one|select_multiple")) %>% 
     separate(col = type, into = c("select_type", "list_name"), sep =" ", remove = TRUE, extra = "drop" )
 
+df_tool_settlement_host_support <- df_choices %>% 
+    filter(list_name %in% c("refugee_settlement_list")) %>% 
+    mutate(i.host_settlement_name = paste0(district, "_", name)) %>% 
+    select(name, label, district, i.host_settlement_name)
+
 # dap
 dap <- read_csv("inputs/r_dap_land_energy.csv")
 
@@ -76,7 +81,7 @@ ref_svy <- as_survey(.data = df_ref_with_weights, strata = strata, weights = wei
 # analysis
 
 df_ref_analysis <- analysis_after_survey_creation(input_svy_obj = ref_svy,
-                                                   input_dap = dap %>% filter(variable %in% colnames(df_ref)) ) %>% 
+                                                   input_dap = dap %>% filter(variable %in% colnames(df_ref), !subset_1 %in% c("meta_district_name")) ) %>% 
     dplyr::mutate(population = "refugee")
 
 
@@ -97,7 +102,11 @@ host_svy <- as_survey(.data = df_host_with_weights, strata = strata, weights = w
 df_host_analysis <- analysis_after_survey_creation(input_svy_obj = host_svy,
                                                   input_dap = dap %>% filter(variable %in% colnames(df_host),
                                                                              subset_1 %in% colnames(df_host)) ) %>% 
-    dplyr::mutate(population = "host_community")
+    dplyr::mutate(population = "host_community") %>% 
+    mutate(subset_1_val =  ifelse(subset_1_name %in% c("meta_district_name") & !subset_1_val %in% c("isingiro_nakivale",
+                                                                                                   "isingiro_oruchinga"), 
+                                  recode(subset_1_val, !!!setNames(df_tool_settlement_host_support$i.host_settlement_name, 
+                                                                   df_tool_settlement_host_support$district)), subset_1_val) )
 
 
 # merge and format analysis ----------------------------------------------------------
