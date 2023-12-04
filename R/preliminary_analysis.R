@@ -81,8 +81,9 @@ ref_svy <- as_survey(.data = df_ref_with_weights, strata = strata, weights = wei
 # analysis
 
 df_ref_analysis <- analysis_after_survey_creation(input_svy_obj = ref_svy,
-                                                   input_dap = dap %>% filter(variable %in% colnames(df_ref), !subset_1 %in% c("meta_district_name")) ) %>% 
-    dplyr::mutate(population = "refugee")
+                                                   input_dap = dap %>% filter(variable %in% colnames(df_ref), !subset_1 %in% c("meta_district_name")),
+                                                  population_type = "refugee",
+                                                  main_subset =  "i.meta_region")
 
 
 # analysis for host -------------------------------------------------------
@@ -101,8 +102,9 @@ host_svy <- as_survey(.data = df_host_with_weights, strata = strata, weights = w
 
 df_host_analysis <- analysis_after_survey_creation(input_svy_obj = host_svy,
                                                   input_dap = dap %>% filter(variable %in% colnames(df_host),
-                                                                             subset_1 %in% colnames(df_host)) ) %>% 
-    dplyr::mutate(population = "host_community") %>% 
+                                                                             subset_1 %in% colnames(df_host)),
+                                                  population_type = "host_community",
+                                                  main_subset =  "i.meta_region") %>% 
     mutate(subset_1_val =  ifelse(subset_1_name %in% c("meta_district_name") & !subset_1_val %in% c("isingiro_nakivale",
                                                                                                    "isingiro_oruchinga"), 
                                   recode(subset_1_val, !!!setNames(df_tool_settlement_host_support$i.host_settlement_name, 
