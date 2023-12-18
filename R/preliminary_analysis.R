@@ -145,6 +145,8 @@ full_analysis_long <- combined_analysis %>%
          population, 
          subset_1_name, 
          subset_1_val, 
+         subset_2_name, 
+         subset_2_val, 
          select_type
          )
 
