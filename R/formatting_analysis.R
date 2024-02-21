@@ -95,48 +95,33 @@ df_analysis_formatting <- df_analysis %>%
 
 df_analysis_wide <- df_analysis_formatting %>% 
     mutate(subset_1_val = ifelse(subset_1_name %in% c("i.meta_hoh_gender"), paste0("hoh_", subset_1_val), subset_1_val)) %>% # there were 2 subsets with gender
-    filter(is.na(subset_2_val)) %>%
     # filter(is.na(subset_2_val), population %in% c("refugee")) %>% 
     # select(-c(subset_1_name, subset_2_name, subset_2_val, n_unweighted)) %>% 
-    select(-c(subset_1_name, subset_2_name, subset_2_val)) %>% 
+    select(-c(subset_1_name, subset_2_name)) %>% 
     mutate(subset_1_val = ifelse(is.na(subset_1_val), "National", subset_1_val)) %>% 
-    pivot_wider(names_from = c(subset_1_val, population), values_from = c(`Results(mean/percentage)`, n_unweighted), values_fill = 0) %>%
+    pivot_wider(names_from = c(subset_1_val, population, subset_2_val), values_from = c(`Results(mean/percentage)`, n_unweighted), values_fill = 0) %>%
     # pivot_wider(names_from = c(subset_1_val), values_from = c(`Results(mean/percentage)`)) %>% 
     arrange(qn_number) %>% 
-    mutate(row_id = row_number()) %>% 
-    rename_with(.fn = ~str_replace(string = .x, pattern = "Results\\(mean\\/percentage\\)_|_unweighted", replacement = ""))
+    mutate(row_id = row_number()) #%>% 
+    # rename_with(.fn = ~str_replace(string = .x, pattern = "Results\\(mean\\/percentage\\)_|_unweighted", replacement = ""))
 
-# A. Settlement level
-settln_host_cols <- c("adjumani_refugee", "bidibidi_refugee", "imvepi_refugee", "kiryandongo_refugee", "kyaka_ii_refugee", "kyangwali_refugee", "lobule_refugee", "nakivale_refugee", "oruchinga_refugee", "palabek_refugee", "palorinya_refugee", "rhino_camp_refugee", "rwamwanja_refugee", "adjumani_adjumani_host_community", "isingiro_nakivale_host_community", "isingiro_oruchinga_host_community", "kamwenge_rwamwanja_host_community", "kikuube_kyangwali_host_community", "kiryandongo_kiryandongo_host_community", "koboko_lobule_host_community", "kyegegwa_kyaka_ii_host_community", "lamwo_palabek_host_community", "madi_okollo_rhino_camp_host_community", "obongi_palorinya_host_community", "terego_imvepi_host_community", "yumbe_bidibidi_host_community")
-settln_host_cols_n <- c("n_adjumani_refugee", "n_bidibidi_refugee", "n_imvepi_refugee", "n_kiryandongo_refugee", "n_kyaka_ii_refugee", "n_kyangwali_refugee", "n_lobule_refugee", "n_nakivale_refugee", "n_oruchinga_refugee", "n_palabek_refugee", "n_palorinya_refugee", "n_rhino_camp_refugee", "n_rwamwanja_refugee", "n_adjumani_adjumani_host_community", "n_isingiro_nakivale_host_community", "n_isingiro_oruchinga_host_community", "n_kamwenge_rwamwanja_host_community", "n_kikuube_kyangwali_host_community", "n_kiryandongo_kiryandongo_host_community", "n_koboko_lobule_host_community", "n_kyegegwa_kyaka_ii_host_community", "n_lamwo_palabek_host_community", "n_madi_okollo_rhino_camp_host_community", "n_obongi_palorinya_host_community", "n_terego_imvepi_host_community", "n_yumbe_bidibidi_host_community")
-settlement_columns <- tibble(settln_host_cols, settln_host_cols_n) %>% 
-    pivot_longer(cols = c(settln_host_cols, settln_host_cols_n), names_to = "entries", values_to = "columns") %>% 
-    pull(columns)
+# start_cols <- c("Question", "variable", "choices/options", "select_type", "analysis_choice_id", "indicator_group_sector", "qn_number", "response_label", "choices")
+# openxlsx::write.xlsx(df_analysis_wide %>% select(any_of(start_cols), ends_with("_NA"), everything()), "outputs/test_wide_format.xlsx")
 
-# B. Regional
-regional_cols <- c("south_west_refugee", "west_nile_refugee", "south_west_host_community", "west_nile_host_community")
-regional_cols_n <- c("n_south_west_refugee", "n_west_nile_refugee", "n_south_west_host_community", "n_west_nile_host_community")
-regional_columns <- tibble(regional_cols, regional_cols_n) %>% 
-    pivot_longer(cols = c(regional_cols, regional_cols_n), names_to = "entries", values_to = "columns") %>% 
-    pull(columns)
+df_cols_for_ordering <- readxl::read_excel("outputs/column_ordering_with_regional.xlsx", sheet = "combined")
 
-# C. National
-national_cols <- c("National_refugee", "National_host_community", "hoh_female_refugee", "hoh_male_refugee", "hoh_female_host_community", "hoh_male_host_community", "female_refugee", "male_refugee", "female_host_community", "male_host_community")
-national_cols_n <- c("n_National_refugee", "n_National_host_community", "n_hoh_female_refugee", "n_hoh_male_refugee", "n_hoh_female_host_community", "n_hoh_male_host_community", "n_female_refugee", "n_male_refugee", "n_female_host_community", "n_male_host_community")
-national_columns <- tibble(national_cols, national_cols_n) %>% 
-    pivot_longer(cols = c(national_cols, national_cols_n), names_to = "entries", values_to = "columns") %>% 
+reordered_columns <- df_cols_for_ordering %>%
+    pivot_longer(cols = c(result_col, n_unweighted), names_to = "entries", values_to = "columns") %>%
     pull(columns)
 
 # reorder
 
-df_analysis_wide_reodered <- df_analysis_wide %>% 
-    relocate(any_of(national_columns), .after = "choices") %>% 
-    relocate(any_of(regional_columns), .after = "choices") %>% 
-    relocate(any_of(settlement_columns), .after = "choices") %>% 
-    relocate(select_type, .after = choices) 
+df_analysis_wide_reodered <- df_analysis_wide %>%
+    relocate(any_of(reordered_columns), .after = "choices") %>%
+    relocate(select_type, .after = choices)
 
 cols_for_num_pct_formatting <- df_analysis_wide_reodered %>% 
-    select(adjumani_refugee:n_male_host_community) %>% 
+    select(`Results(mean/percentage)_adjumani_refugee_NA`:row_id) %>% 
     select(!matches("^n_")) %>% 
     colnames()
 
@@ -151,7 +136,8 @@ df_to_extract_header = df_analysis_wide_reodered %>%
 
 df_extracted_header_data <- tibble("old_cols" = df_to_extract_header) %>% 
     mutate("new_cols" = paste0("x", row_number())) %>% 
-    mutate(old_cols = str_replace(string = old_cols, pattern = "_host_community$|_refugee$", replacement = "")) %>% 
+    mutate(old_cols = str_replace(string = old_cols, pattern = "Results\\(mean\\/percentage\\)_|_host_community$|_refugee$", replacement = "")) %>% 
+    mutate(old_cols = str_replace(string = old_cols, pattern = "_host_community_NA$|_refugee_NA$", replacement = "")) %>% 
     mutate(old_cols = str_replace(string = old_cols, pattern = "^n_.+", replacement = "n")) %>% 
     pivot_wider(names_from = new_cols, values_from = old_cols)
 
@@ -159,8 +145,15 @@ df_extracted_modified_data <- tibble("old_cols" = df_to_extract_header) %>%
     mutate("new_cols" = paste0("x", row_number())) %>% 
     pivot_wider(names_from = new_cols, values_from = old_cols)
 
+df_extracted_host_refugee <- tibble("old_cols" = df_to_extract_header) %>% 
+    mutate("new_cols" = paste0("x", row_number()),
+           old_cols = case_when(str_detect(string = old_cols, pattern = "refugee") ~ "Refugee",
+                                str_detect(string = old_cols, pattern = "host_community") ~ "Host community",)) %>% 
+    
+    pivot_wider(names_from = new_cols, values_from = old_cols)
 
-df_extracted_header <- bind_rows(df_extracted_header_data, df_extracted_modified_data) %>% 
+
+df_extracted_header <- bind_rows(df_extracted_host_refugee, df_extracted_header_data, df_extracted_modified_data) %>% 
     mutate(x1 = NA_character_)
 
 
@@ -169,7 +162,8 @@ df_extracted_header <- bind_rows(df_extracted_header_data, df_extracted_modified
 wb <- createWorkbook()
 
 hs1 <- createStyle(fgFill = "#EE5859", halign = "CENTER", textDecoration = "Bold", fontColour = "white", fontSize = 14, wrapText = T)
-hs2 <- createStyle(fgFill = "#808080", halign = "LEFT", textDecoration = "Bold", fontColour = "white", wrapText = T)
+hs2 <- createStyle(fgFill = "#808080", halign = "LEFT", textDecoration = "Bold", fontColour = "white", wrapText = F)
+hs2_no_bold <- createStyle(fgFill = "#808080", halign = "LEFT", textDecoration = "", fontColour = "white", wrapText = F)
 hs3 <- createStyle(fgFill = "#EE5859", halign = "CENTER", textDecoration = "Bold", border = "Bottom", fontColour = "white")
 
 # numbers
@@ -185,24 +179,28 @@ addWorksheet(wb, sheetName="Analysis")
 mergeCells(wb, sheet = "Analysis", rows = 2, cols = 3:54)
 addStyle(wb, sheet = "Analysis", hs1, rows = 2, cols = 3:54, gridExpand = TRUE)
 writeData(wb, sheet = "Analysis", "Settlement", startCol = 3, startRow = 2, headerStyle = hs1)
-mergeCells(wb, sheet = "Analysis", rows = 2, cols = 55:62)
-addStyle(wb, sheet = "Analysis", hs1, rows = 2, cols = 55:62, gridExpand = TRUE)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 55:144)
+addStyle(wb, sheet = "Analysis", hs1, rows = 2, cols = 55:144, gridExpand = TRUE)
 writeData(wb, sheet = "Analysis", "Regional", startCol = 55, startRow = 2, headerStyle = hs1)
-mergeCells(wb, sheet = "Analysis", rows = 2, cols = 63:82)
-addStyle(wb, sheet = "Analysis", hs1, rows = 2, cols = 63:82, gridExpand = TRUE)
-writeData(wb, sheet = "Analysis", "National", startCol = 63, startRow = 2, headerStyle = hs1)
-# header showing results headings
-writeData(wb, sheet = "Analysis", df_extracted_header %>% head(1), startCol = 1, startRow = 3, headerStyle = hs2, colNames = FALSE)
-addStyle(wb, sheet = "Analysis", hs2, rows = 3, cols = 1:82, gridExpand = TRUE)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 145:164)
+addStyle(wb, sheet = "Analysis", hs1, rows = 2, cols = 145:164, gridExpand = TRUE)
+writeData(wb, sheet = "Analysis", "National", startCol = 145, startRow = 2, headerStyle = hs1)
+# refugee or host
 
-setColWidths(wb = wb, sheet = "Analysis", cols = 1, widths = 60)
+
+# header showing results headings
+writeData(wb, sheet = "Analysis", df_extracted_header %>% head(2), startCol = 1, startRow = 3, headerStyle = hs2, colNames = FALSE)
+addStyle(wb, sheet = "Analysis", hs2, rows = 3, cols = 1:164, gridExpand = TRUE)
+addStyle(wb, sheet = "Analysis", hs2_no_bold, rows = 4, cols = 1:164, gridExpand = TRUE)
+
+setColWidths(wb = wb, sheet = "Analysis", cols = 1, widths = 70)
 setColWidths(wb = wb, sheet = "Analysis", cols = 2, widths = 10)
-setColWidths(wb = wb, sheet = "Analysis", cols = 3:82, widths = 8)
+setColWidths(wb = wb, sheet = "Analysis", cols = 3:164, widths = 8)
 
 # split variables to be written in different tables with in a sheet
 sheet_variables_data <- split(df_analysis_wide_reodered, factor(df_analysis_wide_reodered$variable, levels = unique(df_analysis_wide_reodered$variable)))
 
-previous_row_end <- 3
+previous_row_end <- 4
 
 for (i in 1:length(sheet_variables_data)) {
     
@@ -217,15 +215,15 @@ for (i in 1:length(sheet_variables_data)) {
         for(n in cols_for_num_pct_formatting){class(current_variable_data[[n]])= "numeric"}
     }
     
-    current_row_start <- previous_row_end + 3
+    current_row_start <- previous_row_end + 2
     
     print(current_row_start)
     
     # add header for variable
-    writeData(wb, sheet = "Analysis", get_question, startCol = 1, startRow = previous_row_end + 2)
-    addStyle(wb, sheet = "Analysis", hs2, rows = previous_row_end + 2, cols = 1, gridExpand = TRUE)
-    writeData(wb, sheet = "Analysis", get_qn_type, startCol = 2, startRow = previous_row_end + 2)
-    addStyle(wb, sheet = "Analysis", hs2, rows = previous_row_end + 2, cols = 2, gridExpand = TRUE)
+    writeData(wb, sheet = "Analysis", get_question, startCol = 1, startRow = previous_row_end + 1)
+    addStyle(wb, sheet = "Analysis", hs2, rows = previous_row_end + 1, cols = 1, gridExpand = TRUE)
+    writeData(wb, sheet = "Analysis", get_qn_type, startCol = 2, startRow = previous_row_end + 1)
+    addStyle(wb, sheet = "Analysis", hs2, rows = previous_row_end + 1, cols = 2, gridExpand = TRUE)
     
     current_data_length <- max(current_variable_data$row_id) - min(current_variable_data$row_id)
     
@@ -241,16 +239,16 @@ for (i in 1:length(sheet_variables_data)) {
                    startCol = 1, 
                    colNames = FALSE)
     
-    previous_row_end <- current_row_start + 1 + current_data_length
+    previous_row_end <- current_row_start + current_data_length
 }
 # hide grid lines
 showGridLines(wb,  "Analysis", showGridLines = FALSE)  
 
 # freeze pane
-freezePane(wb, "Analysis", firstActiveRow = 4, firstActiveCol = 3)
+freezePane(wb, "Analysis", firstActiveRow = 5, firstActiveCol = 3)
 
-openXL(wb)
+# openXL(wb)
 
-# saveWorkbook(wb, paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"), overwrite = TRUE)
-# openXL(file = paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"))
+saveWorkbook(wb, paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"), overwrite = TRUE)
+openXL(file = paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"))
 
