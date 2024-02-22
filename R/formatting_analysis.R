@@ -30,8 +30,7 @@ df_tool_groups <- df_survey %>%
     fill(i.group) %>% 
     filter(!str_detect(string = name, pattern = "_other$"),
            !str_detect(string = type, pattern = "group|repeat|text|geopoint|^gps$|^note$"),
-           !is.na(i.group)
-    ) %>% 
+           !is.na(i.group)) %>% 
     mutate(qn_number = row_number()) %>% 
     select(type, name, label, indicator_group_sector = i.group, qn_number)
 
@@ -66,8 +65,7 @@ df_unformatted_analysis <- read_csv("outputs/combined_analysis_lf_uga_land_and_e
            subset_1_val, 
            subset_2_name,
            subset_2_val,
-           select_type
-    )
+           select_type )
 
 df_analysis <- df_unformatted_analysis %>% 
     mutate(analysis_choice_id = case_when(select_type %in% c("select_multiple", "select multiple") ~ str_replace(string = `choices/options`, 
@@ -87,23 +85,17 @@ df_analysis_formatting <- df_analysis %>%
            # subset_1_val_label =  ifelse(is.na(subset_1_val_label), "National", subset_1_val_label),
            # subset_2_val_label = recode(subset_2_val, !!!setNames(df_choices$choice_label, df_choices$choice_name)),
            # subset_2_val_label =  ifelse(is.na(subset_2_val_label), "National", subset_2_val_label)
-    ) #%>% 
-    # select(-c(n_unweighted, subset_1_name, subset_1_val))  %>%  
-    # filter(!is.na(indicator_group_sector))
+    )
 
 # make wider and reorder columns
 
 df_analysis_wide <- df_analysis_formatting %>% 
     mutate(subset_1_val = ifelse(subset_1_name %in% c("i.meta_hoh_gender"), paste0("hoh_", subset_1_val), subset_1_val)) %>% # there were 2 subsets with gender
-    # filter(is.na(subset_2_val), population %in% c("refugee")) %>% 
-    # select(-c(subset_1_name, subset_2_name, subset_2_val, n_unweighted)) %>% 
     select(-c(subset_1_name, subset_2_name)) %>% 
     mutate(subset_1_val = ifelse(is.na(subset_1_val), "National", subset_1_val)) %>% 
     pivot_wider(names_from = c(subset_1_val, population, subset_2_val), values_from = c(`Results(mean/percentage)`, n_unweighted), values_fill = 0) %>%
-    # pivot_wider(names_from = c(subset_1_val), values_from = c(`Results(mean/percentage)`)) %>% 
     arrange(qn_number) %>% 
-    mutate(row_id = row_number()) #%>% 
-    # rename_with(.fn = ~str_replace(string = .x, pattern = "Results\\(mean\\/percentage\\)_|_unweighted", replacement = ""))
+    mutate(row_id = row_number()) 
 
 # start_cols <- c("Question", "variable", "choices/options", "select_type", "analysis_choice_id", "indicator_group_sector", "qn_number", "response_label", "choices")
 # openxlsx::write.xlsx(df_analysis_wide %>% select(any_of(start_cols), ends_with("_NA"), everything()), "outputs/test_wide_format.xlsx")
