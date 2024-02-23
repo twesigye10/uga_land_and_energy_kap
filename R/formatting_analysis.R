@@ -235,7 +235,7 @@ setColWidths(wb = wb, sheet = "Analysis", cols = 3:90, widths = 8)
 # split variables to be written in different tables with in a sheet
 sheet_variables_data <- split(df_analysis_wide_reodered, factor(df_analysis_wide_reodered$variable, levels = unique(df_analysis_wide_reodered$variable)))
 
-previous_row_end <- 4
+previous_row_end <- 3
 
 for (i in 1:length(sheet_variables_data)) {
     
@@ -279,10 +279,10 @@ for (i in 1:length(sheet_variables_data)) {
 # showGridLines(wb,  "Analysis", showGridLines = FALSE)  
 
 # freeze pane
-freezePane(wb, "Analysis", firstActiveRow = 5, firstActiveCol = 3)
+freezePane(wb, "Analysis", firstActiveRow = 4, firstActiveCol = 3)
 
-openXL(wb)
+# openXL(wb)
 
-# saveWorkbook(wb, paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"), overwrite = TRUE)
-# openXL(file = paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"))
+saveWorkbook(wb, paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"), overwrite = TRUE)
+openXL(file = paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"))
 
