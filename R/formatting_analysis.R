@@ -85,7 +85,10 @@ df_analysis_formatting <- df_analysis %>%
            # subset_1_val_label =  ifelse(is.na(subset_1_val_label), "National", subset_1_val_label),
            # subset_2_val_label = recode(subset_2_val, !!!setNames(df_choices$choice_label, df_choices$choice_name)),
            # subset_2_val_label =  ifelse(is.na(subset_2_val_label), "National", subset_2_val_label)
-    )
+    ) %>% 
+    filter(!subset_1_name %in% c("i.meta_hoh_gender")) %>% 
+    filter(!(subset_2_name %in% c("i.meta_region") & subset_1_name %in% c("meta_refugee_settlement", "meta_district_name")))
+    
 
 # make wider and reorder columns
 
@@ -95,7 +98,8 @@ df_analysis_wide <- df_analysis_formatting %>%
     mutate(subset_1_val = ifelse(is.na(subset_1_val), "National", subset_1_val)) %>% 
     pivot_wider(names_from = c(subset_1_val, population, subset_2_val), values_from = c(`Results(mean/percentage)`, n_unweighted), values_fill = 0) %>%
     arrange(qn_number) %>% 
-    mutate(row_id = row_number()) 
+    mutate(row_id = row_number(),
+           select_type = str_to_sentence(str_replace_all(string = select_type, pattern = "_", replacement = " "))) 
 
 # start_cols <- c("Question", "variable", "choices/options", "select_type", "analysis_choice_id", "indicator_group_sector", "qn_number", "response_label", "choices")
 # openxlsx::write.xlsx(df_analysis_wide %>% select(any_of(start_cols), ends_with("_NA"), everything()), "outputs/test_wide_format.xlsx")
@@ -133,6 +137,15 @@ df_extracted_header_data <- tibble("old_cols" = df_to_extract_header) %>%
     mutate(old_cols = str_replace(string = old_cols, pattern = "^n_.+", replacement = "n")) %>% 
     pivot_wider(names_from = new_cols, values_from = old_cols)
 
+df_header_labels_info <- readxl::read_excel("outputs/column_ordering_with_regional.xlsx", sheet = "header_info")
+df_extracted_header_label <- tibble("old_cols" = df_to_extract_header) %>% 
+    mutate("new_cols" = paste0("x", row_number())) %>% 
+    mutate(old_cols = str_replace(string = old_cols, pattern = "Results\\(mean\\/percentage\\)_|_host_community$|_refugee$", replacement = "")) %>% 
+    mutate(old_cols = str_replace(string = old_cols, pattern = "_host_community_NA$|_refugee_NA$", replacement = "")) %>% 
+    mutate(old_cols = str_replace(string = old_cols, pattern = "^n_.+", replacement = "n"),
+           old_cols = recode(old_cols, !!!setNames(df_header_labels_info$header_label, df_header_labels_info$header_code))) %>% 
+    pivot_wider(names_from = new_cols, values_from = old_cols)
+
 df_extracted_modified_data <- tibble("old_cols" = df_to_extract_header) %>% 
     mutate("new_cols" = paste0("x", row_number())) %>% 
     pivot_wider(names_from = new_cols, values_from = old_cols)
@@ -145,7 +158,7 @@ df_extracted_host_refugee <- tibble("old_cols" = df_to_extract_header) %>%
     pivot_wider(names_from = new_cols, values_from = old_cols)
 
 
-df_extracted_header <- bind_rows(df_extracted_host_refugee, df_extracted_header_data, df_extracted_modified_data) %>% 
+df_extracted_header <- bind_rows(df_extracted_header_label, df_extracted_host_refugee, df_extracted_header_data, df_extracted_modified_data) %>% 
     mutate(x1 = NA_character_)
 
 
@@ -153,41 +166,71 @@ df_extracted_header <- bind_rows(df_extracted_host_refugee, df_extracted_header_
 
 wb <- createWorkbook()
 
-hs1 <- createStyle(fgFill = "#EE5859", halign = "CENTER", textDecoration = "Bold", fontColour = "white", fontSize = 14, wrapText = T)
+hs1 <- createStyle(fgFill = "#EE5859", halign = "CENTER", textDecoration = "Bold", fontColour = "white", fontSize = 14, wrapText = T, 
+                   border = "TopBottomLeftRight", borderStyle = "medium", borderColour = "#000000")
 hs2 <- createStyle(fgFill = "#808080", halign = "LEFT", textDecoration = "Bold", fontColour = "white", wrapText = F)
 hs2_no_bold <- createStyle(fgFill = "#808080", halign = "LEFT", textDecoration = "", fontColour = "white", wrapText = F)
-hs3 <- createStyle(fgFill = "#EE5859", halign = "CENTER", textDecoration = "Bold", border = "Bottom", fontColour = "white")
+hs3 <- createStyle(fgFill = "#808080", halign = "CENTER", fontColour = "white", textDecoration = "Bold", 
+                   border = "TopBottomLeftRight", borderStyle = "medium", borderColour = "#000000")
 
 # numbers
 number_2digit_style <- openxlsx::createStyle(numFmt = "0.00")
 number_1digit_style <- openxlsx::createStyle(numFmt = "0.0")
 number_style <- openxlsx::createStyle(numFmt = "0")
-
+# percent
+pct = createStyle(numFmt="0.0%") # not working
 
 addWorksheet(wb, sheetName="Analysis")
 
-# add header to sheet
+# add disaggregations
+mergeCells(wb, sheet = "Analysis", rows = 1, cols = 3:54)
+writeData(wb, sheet = "Analysis", "Settlement", startCol = 3, startRow = 1, headerStyle = hs1)
+mergeCells(wb, sheet = "Analysis", rows = 1, cols = 55:78)
+writeData(wb, sheet = "Analysis", "Regional", startCol = 55, startRow = 1, headerStyle = hs1)
+mergeCells(wb, sheet = "Analysis", rows = 1, cols = 79:86)
+writeData(wb, sheet = "Analysis", "Respondent Gender", startCol = 79, startRow = 1, headerStyle = hs1)
+mergeCells(wb, sheet = "Analysis", rows = 1, cols = 87:90)
+writeData(wb, sheet = "Analysis", "National", startCol = 87, startRow = 1, headerStyle = hs1)
 
-mergeCells(wb, sheet = "Analysis", rows = 2, cols = 3:54)
-addStyle(wb, sheet = "Analysis", hs1, rows = 2, cols = 3:54, gridExpand = TRUE)
-writeData(wb, sheet = "Analysis", "Settlement", startCol = 3, startRow = 2, headerStyle = hs1)
-mergeCells(wb, sheet = "Analysis", rows = 2, cols = 55:144)
-addStyle(wb, sheet = "Analysis", hs1, rows = 2, cols = 55:144, gridExpand = TRUE)
-writeData(wb, sheet = "Analysis", "Regional", startCol = 55, startRow = 2, headerStyle = hs1)
-mergeCells(wb, sheet = "Analysis", rows = 2, cols = 145:164)
-addStyle(wb, sheet = "Analysis", hs1, rows = 2, cols = 145:164, gridExpand = TRUE)
-writeData(wb, sheet = "Analysis", "National", startCol = 145, startRow = 2, headerStyle = hs1)
+addStyle(wb, sheet = "Analysis", hs1, rows = 1, cols = 3:90, gridExpand = TRUE)
+
+# specify status of the analysis
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 3:28)
+writeData(wb, sheet = "Analysis", "Refugee", startCol = 3, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 29:54)
+writeData(wb, sheet = "Analysis", "Host Community", startCol = 29, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 55:58)
+writeData(wb, sheet = "Analysis", "Refugee", startCol = 55, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 59:62)
+writeData(wb, sheet = "Analysis", "Host Community", startCol = 59, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 63:70)
+writeData(wb, sheet = "Analysis", "Refugee", startCol = 63, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 71:78)
+writeData(wb, sheet = "Analysis", "Host Community", startCol = 71, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 79:82)
+writeData(wb, sheet = "Analysis", "Refugee", startCol = 79, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 83:86)
+writeData(wb, sheet = "Analysis", "Host Community", startCol = 83, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 87:88)
+writeData(wb, sheet = "Analysis", "Refugee", startCol = 87, startRow = 2)
+mergeCells(wb, sheet = "Analysis", rows = 2, cols = 89:90)
+writeData(wb, sheet = "Analysis", "Host Community", startCol = 89, startRow = 2)
+
+addStyle(wb, sheet = "Analysis", hs3, rows = 2, cols = 3:90, gridExpand = TRUE)
+
 # refugee or host
 
 
 # header showing results headings
-writeData(wb, sheet = "Analysis", df_extracted_header %>% head(2), startCol = 1, startRow = 3, headerStyle = hs2, colNames = FALSE)
-addStyle(wb, sheet = "Analysis", hs2, rows = 3, cols = 1:164, gridExpand = TRUE)
-addStyle(wb, sheet = "Analysis", hs2_no_bold, rows = 4, cols = 1:164, gridExpand = TRUE)
+writeData(wb, sheet = "Analysis", df_extracted_header %>% head(1), startCol = 1, 
+          startRow = 3, headerStyle = hs2, colNames = FALSE, 
+          borders = "all", borderColour = "#000000", borderStyle = "thin")
+# addStyle(wb, sheet = "Analysis", hs2, rows = 3, cols = 1:90, gridExpand = TRUE)
+# addStyle(wb, sheet = "Analysis", hs2_no_bold, rows = 4, cols = 1:90, gridExpand = TRUE)
 
 setColWidths(wb = wb, sheet = "Analysis", cols = 1, widths = 70)
 setColWidths(wb = wb, sheet = "Analysis", cols = 2, widths = 10)
-setColWidths(wb = wb, sheet = "Analysis", cols = 3:164, widths = 8)
+setColWidths(wb = wb, sheet = "Analysis", cols = 3:90, widths = 8)
 
 # split variables to be written in different tables with in a sheet
 sheet_variables_data <- split(df_analysis_wide_reodered, factor(df_analysis_wide_reodered$variable, levels = unique(df_analysis_wide_reodered$variable)))
@@ -201,7 +244,7 @@ for (i in 1:length(sheet_variables_data)) {
     get_question <- current_variable_data %>% select(Question) %>% unique() %>% pull()
     get_qn_type <- current_variable_data %>% select(select_type) %>% unique() %>% pull()
     
-    if(get_qn_type %in% c("select_one", "select one", "select_multiple", "select multiple")){
+    if(get_qn_type %in% c("select_one", "Select one", "select_multiple", "Select multiple")){
         for(n in cols_for_num_pct_formatting){class(current_variable_data[[n]])= "percentage"}
     }else{
         for(n in cols_for_num_pct_formatting){class(current_variable_data[[n]])= "numeric"}
@@ -213,10 +256,9 @@ for (i in 1:length(sheet_variables_data)) {
     
     # add header for variable
     writeData(wb, sheet = "Analysis", get_question, startCol = 1, startRow = previous_row_end + 1)
-    addStyle(wb, sheet = "Analysis", hs2, rows = previous_row_end + 1, cols = 1, gridExpand = TRUE)
     writeData(wb, sheet = "Analysis", get_qn_type, startCol = 2, startRow = previous_row_end + 1)
-    addStyle(wb, sheet = "Analysis", hs2, rows = previous_row_end + 1, cols = 2, gridExpand = TRUE)
-    
+    addStyle(wb, sheet = "Analysis", hs2, rows = previous_row_end + 1, cols = 1:2, gridExpand = TRUE)
+
     current_data_length <- max(current_variable_data$row_id) - min(current_variable_data$row_id)
     
     writeData(wb = wb, 
@@ -234,13 +276,13 @@ for (i in 1:length(sheet_variables_data)) {
     previous_row_end <- current_row_start + current_data_length
 }
 # hide grid lines
-showGridLines(wb,  "Analysis", showGridLines = FALSE)  
+# showGridLines(wb,  "Analysis", showGridLines = FALSE)  
 
 # freeze pane
 freezePane(wb, "Analysis", firstActiveRow = 5, firstActiveCol = 3)
 
-# openXL(wb)
+openXL(wb)
 
-saveWorkbook(wb, paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"), overwrite = TRUE)
-openXL(file = paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"))
+# saveWorkbook(wb, paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"), overwrite = TRUE)
+# openXL(file = paste0("outputs/", butteR::date_file_prefix(),"_formatted_analysis_uga_kap_draft.xlsx"))
 
