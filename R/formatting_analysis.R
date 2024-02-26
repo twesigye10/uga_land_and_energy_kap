@@ -32,7 +32,7 @@ df_tool_groups <- df_survey %>%
            !str_detect(string = type, pattern = "group|repeat|text|geopoint|^gps$|^note$"),
            !is.na(i.group)) %>% 
     mutate(qn_number = row_number()) %>% 
-    select(type, name, label, indicator_group_sector = i.group, qn_number)
+    select(type, name, label, relevant, indicator_group_sector = i.group, qn_number)
 
 # support composite grps and labels
 df_support_composite_grps <- readxl::read_excel("support_files/support composite grps and labels.xlsx")
@@ -78,7 +78,7 @@ df_analysis <- df_unformatted_analysis %>%
 
 df_analysis_formatting <- df_analysis %>% 
     left_join(df_tool_groups %>% 
-                  select(name, indicator_group_sector, qn_number), by = c("variable" = "name")) %>% 
+                  select(name, indicator_group_sector, relevant, qn_number), by = c("variable" = "name")) %>% 
     mutate(response_label = recode(analysis_choice_id, !!!setNames(df_choices_support$choice_label, df_choices_support$survey_choice_id)),
            choices = ifelse(is.na(response_label), `choices/options`, response_label),
            # subset_1_val_label = recode(subset_1_val, !!!setNames(df_choices$choice_label, df_choices$choice_name)),
@@ -127,6 +127,7 @@ df_to_extract_header = df_analysis_wide_reodered %>%
     select(-c(Question, `choices/options`, 
               analysis_choice_id, 
               indicator_group_sector,response_label,
+              relevant,
               row_id, variable, qn_number)) %>% 
     colnames()
 
@@ -168,9 +169,10 @@ wb <- createWorkbook()
 
 hs1 <- createStyle(fgFill = "#EE5859", halign = "CENTER", textDecoration = "Bold", fontColour = "white", fontSize = 14, wrapText = T, 
                    border = "TopBottomLeftRight", borderStyle = "medium", borderColour = "#000000")
-hs2 <- createStyle(fgFill = "#808080", halign = "LEFT", textDecoration = "Bold", fontColour = "white", wrapText = F)
-hs2_no_bold <- createStyle(fgFill = "#808080", halign = "LEFT", textDecoration = "", fontColour = "white", wrapText = F)
-hs3 <- createStyle(fgFill = "#808080", halign = "CENTER", fontColour = "white", textDecoration = "Bold", 
+hs2 <- createStyle(fgFill = "grey", halign = "LEFT", textDecoration = "Bold", fontColour = "white", wrapText = F)
+hs2_no_bold <- createStyle(fgFill = "grey", halign = "LEFT", textDecoration = "", fontColour = "white", wrapText = F)
+hs2_relevant <- createStyle(fgFill = "grey", halign = "LEFT", textDecoration = "", fontColour = "#808080", wrapText = F)
+hs3 <- createStyle(fgFill = "grey", halign = "CENTER", fontColour = "white", textDecoration = "Bold", 
                    border = "TopBottomLeftRight", borderStyle = "medium", borderColour = "#000000")
 
 # numbers
@@ -243,6 +245,7 @@ for (i in 1:length(sheet_variables_data)) {
     
     get_question <- current_variable_data %>% select(Question) %>% unique() %>% pull()
     get_qn_type <- current_variable_data %>% select(select_type) %>% unique() %>% pull()
+    get_relevant_xml <- current_variable_data %>% select(relevant) %>% unique() %>% pull()
     
     if(get_qn_type %in% c("select_one", "Select one", "select_multiple", "Select multiple")){
         for(n in cols_for_num_pct_formatting){class(current_variable_data[[n]])= "percentage"}
@@ -250,7 +253,7 @@ for (i in 1:length(sheet_variables_data)) {
         for(n in cols_for_num_pct_formatting){class(current_variable_data[[n]])= "numeric"}
     }
     
-    current_row_start <- previous_row_end + 2
+    current_row_start <- previous_row_end + 3
     
     print(current_row_start)
     
@@ -258,6 +261,9 @@ for (i in 1:length(sheet_variables_data)) {
     writeData(wb, sheet = "Analysis", get_question, startCol = 1, startRow = previous_row_end + 1)
     writeData(wb, sheet = "Analysis", get_qn_type, startCol = 2, startRow = previous_row_end + 1)
     addStyle(wb, sheet = "Analysis", hs2, rows = previous_row_end + 1, cols = 1:2, gridExpand = TRUE)
+    # relevant
+    writeData(wb, sheet = "Analysis", get_relevant_xml, startCol = 1, startRow = previous_row_end + 2)
+    addStyle(wb, sheet = "Analysis", hs2_relevant, rows = previous_row_end + 2, cols = 1:2, gridExpand = TRUE)
 
     current_data_length <- max(current_variable_data$row_id) - min(current_variable_data$row_id)
     
@@ -267,6 +273,7 @@ for (i in 1:length(sheet_variables_data)) {
                        select(-c(Question, `choices/options`, 
                                  analysis_choice_id, 
                                  indicator_group_sector,response_label,
+                                 relevant,
                                  row_id, variable, qn_number)
                        ) %>% mutate(select_type = NA_character_), 
                    startRow = current_row_start, 
