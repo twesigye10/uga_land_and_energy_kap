@@ -253,6 +253,7 @@ for (i in 1:length(sheet_variables_data)) {
         for(n in cols_for_num_pct_formatting){class(current_variable_data[[n]])= "numeric"}
     }
     
+    # this controls rows between questions
     current_row_start <- previous_row_end + 3
     
     print(current_row_start)
