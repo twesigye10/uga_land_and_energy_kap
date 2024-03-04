@@ -174,49 +174,49 @@ add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_other_wi
 
 # spatial checks ----------------------------------------------------------
 
-# if("status" %in% colnames(df_sample_data)){
-#     sample_pt_nos <- df_sample_data %>% 
-#         mutate(unique_pt_number = paste0(status, "_", Name)) %>% 
-#         pull(unique_pt_number) %>% 
-#         unique()
-# }else{
-#     sample_pt_nos <- df_sample_data %>% 
-#         mutate(unique_pt_number = Name) %>% 
-#         pull(unique_pt_number) %>% 
-#         unique()
-# }
-# 
-# # duplicate point numbers
-# df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
-#                                                   input_enumerator_id_col = "enumerator_id",
-#                                                   input_location_col = "district_name",
-#                                                   input_point_id_col = "point_number",
-#                                                   input_sample_pt_nos_list = sample_pt_nos)
-# 
-# add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
-# 
+if("status" %in% colnames(df_sample_data)){
+    sample_pt_nos <- df_sample_data %>%
+        mutate(unique_pt_number = paste0(status, "_", Name)) %>%
+        pull(unique_pt_number) %>%
+        unique()
+}else{
+    sample_pt_nos <- df_sample_data %>%
+        mutate(unique_pt_number = Name) %>%
+        pull(unique_pt_number) %>%
+        unique()
+}
+
+# duplicate point numbers
+df_duplicate_pt_nos <- check_duplicate_pt_numbers(input_tool_data = df_tool_data,
+                                                  input_enumerator_id_col = "enumerator_id",
+                                                  input_location_col = "district_name",
+                                                  input_point_id_col = "point_number",
+                                                  input_sample_pt_nos_list = sample_pt_nos)
+
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_duplicate_pt_nos")
+
 
 # point number does not exist in sample
 
-# df_pt_number_not_in_sample <- check_pt_number_not_in_samples(input_tool_data = df_tool_data,
-#                                                              input_enumerator_id_col = "enumerator_id",
-#                                                              input_location_col = "district_name",
-#                                                              input_point_id_col = "point_number",
-#                                                              input_sample_pt_nos_list = sample_pt_nos)
-# 
-# add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_pt_number_not_in_sample")
+df_pt_number_not_in_sample <- check_pt_number_not_in_samples(input_tool_data = df_tool_data,
+                                                             input_enumerator_id_col = "enumerator_id",
+                                                             input_location_col = "district_name",
+                                                             input_point_id_col = "point_number",
+                                                             input_sample_pt_nos_list = sample_pt_nos)
+
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_pt_number_not_in_sample")
 
 
 # check for exceeded threshold distance
 
-# df_greater_thresh_distance <- check_threshold_distance(input_sample_data = df_sample_data,
-#                                                        input_tool_data = df_tool_data,
-#                                                        input_enumerator_id_col = "enumerator_id",
-#                                                        input_location_col = "district_name",
-#                                                        input_point_id_col = "point_number",
-#                                                        input_threshold_dist = 150)
-# 
-# add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_greater_thresh_distance")
+df_greater_thresh_distance <- check_threshold_distance(input_sample_data = df_sample_data,
+                                                       input_tool_data = df_tool_data %>% filter(!is.na(`_geopoint_longitude`)),
+                                                       input_enumerator_id_col = "enumerator_id",
+                                                       input_location_col = "district_name",
+                                                       input_point_id_col = "point_number",
+                                                       input_threshold_dist = 150)
+
+add_checks_data_to_list(input_list_name = "checks", input_df_name = "df_greater_thresh_distance")
 
 
 # logical checks ----------------------------------------------------------
