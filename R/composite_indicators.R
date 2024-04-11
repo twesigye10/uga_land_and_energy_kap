@@ -9,6 +9,9 @@ create_composite_indicators <- function(input_df) {
                i.meta_respondent_age = case_when(meta_respondent_age <= 18 ~ "age_12_18",
                                                  meta_respondent_age <= 59 ~ "age_19_59",
                                                  meta_respondent_age > 59 ~ "age_greater_59",
-                                                 TRUE ~ "NA")
+                                                 TRUE ~ "NA"),
+               i.land_access_attempts_extra_land = case_when(land_hh_have_access_to_additional_land %in% c("yes") ~ "Yes, additional land",
+                                                             land_hh_have_access_to_additional_land %in% c("no") & land_hh_ever_attempt_access_additional_land %in% c("yes") ~ "Attempted unsuccessfuly",
+                                                             land_hh_have_access_to_additional_land %in% c("no") & land_hh_ever_attempt_access_additional_land %in% c("no") ~ "Never attempted")
         )
 }
